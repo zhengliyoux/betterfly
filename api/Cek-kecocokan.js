@@ -9,7 +9,7 @@ module.exports = {
     if (!nama1 || !nama2) {
       return res.json({
         status: false,
-        error: "Masukkan kedua nama. Contoh: ?nama1=Rasya&nama2=Sabrina"
+        error: "Masukkan kedua nama. Contoh: ?nama1=Putra&nama2=Olivia"
       });
     }
 
