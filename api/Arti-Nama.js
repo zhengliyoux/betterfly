@@ -8,7 +8,7 @@ module.exports = {
 
   async run(req, res) {
     const { nama } = req.query;
-    if (!nama) return res.json({ status: false, error: "Masukkan nama. Contoh: ?nama=Rasya" });
+    if (!nama) return res.json({ status: false, error: "Masukkan nama. Contoh: ?nama=Putra" });
 
     try {
       const response = await fetch(`https://api.siputzx.my.id/api/primbon/artinama?nama=${encodeURIComponent(nama)}`);
