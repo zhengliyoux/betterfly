@@ -1,0 +1,66 @@
+{
+  "name": "Phoenix Api's",
+  "version": "Phoenix UI",
+  "description": "Simple and Easy-to-Use API Documentation",
+  "header": {
+    "status": "Online!",
+    "imageSrc": [
+      "https://media4.giphy.com/media/l0Iy33dWjmywkCnNS/giphy.gif?cid=6c09b952p3mt40j1mgznfi9rwwtccbjl7mtc2kvfugymeinr&ep=v1_internal_gif_by_id&rid=giphy.gif&ct=g"
+    ],
+    "imageSize": {
+      "mobile": "80%",
+      "tablet": "40%",
+      "desktop": "40%"
+    }
+  },
+  "apiSettings": {
+    "creator": "Phoenix"
+  },
+  "links": [
+    {
+      "name": "Source Code",
+      "url": "https://github.com/zhengliyoux/betterfly"
+    },
+    {
+      "name": "Contact Me",
+      "url": "https://wa.me/62882016523845"
+    }
+  ],
+  "categories": [
+    {
+      "name": "AI (Artificial Intelligence)",
+      "items": [
+        {
+          "name": "Groq AI",
+          "desc": "Talk With Groq AIi",
+          "path": "/ai/groq?text="
+        }, 
+        {
+          "name": "Blackbox AI",
+          "desc": "Talk With Blackbox AI",
+          "path": "/ai/blackbox?text="
+        }
+      ]
+    },
+    {
+      "name": "Random",
+      "items": [
+        {
+          "name": "Blue Archive",
+          "desc": "Blue Archive Random Images",
+          "path": "/random/ba"
+        }
+      ]
+    },
+    {
+      "name": "Search Tools",
+      "items": [
+        {
+          "name": "YouTube",
+          "desc": "Video search",
+          "path": "/search/youtube?q="
+        }
+      ]
+    }
+  ]
+}
