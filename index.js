@@ -36,9 +36,7 @@ global.getBuffer = async (url, options = {}) => {
       ...options,
       responseType: 'arraybuffer'
     });
-
     return res.data;
-
   } catch (err) {
     return err;
   }
@@ -54,9 +52,7 @@ global.fetchJson = async (url, options = {}) => {
       },
       ...options
     });
-
     return res.data;
-
   } catch (err) {
     return err;
   }
@@ -85,6 +81,7 @@ const serverStart = Date.now();
 
 const requestLogs = [];
 const endpointHistory = [];
+const liveLogs = []; // ✅ FIX: liveLogs was missing declaration
 
 const ipRequests = {};
 const blockedIPs = {};
@@ -96,7 +93,6 @@ function formatRuntime(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
-
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
@@ -114,36 +110,32 @@ app.use((req, res, next) => {
 
   const now = Date.now();
 
-  /* BLOCK CHECK */
-
   if (blockedIPs[ip]) {
-
     if (now < blockedIPs[ip]) {
-
       return res.status(429).json({
         status: false,
         code: 429,
         message: 'IP blocked sementara karena spam request.'
       });
-
     } else {
       delete blockedIPs[ip];
     }
   }
 
-  /* RATE LIMIT */
-
   if (!ipRequests[ip]) ipRequests[ip] = [];
 
-  ipRequests[ip] = ipRequests[ip].filter(
-    t => now - t < 60000
-  );
-
+  ipRequests[ip] = ipRequests[ip].filter(t => now - t < 60000);
   ipRequests[ip].push(now);
 
   if (ipRequests[ip].length > RATE_LIMIT) {
-
     blockedIPs[ip] = now + BLOCK_DURATION;
+
+    // ✅ FIX: liveLogs.unshift moved inside middleware where req is accessible
+    liveLogs.unshift({
+      type: 'blocked',
+      time: new Date().toLocaleTimeString('id-ID'),
+      message: `${ip} blocked for spam requests`
+    });
 
     console.log(
       chalk.bgRed.white(` BLOCKED `),
@@ -158,11 +150,7 @@ app.use((req, res, next) => {
     });
   }
 
-  /* TOTAL REQUEST */
-
   global.totalreq += 1;
-
-  /* LOG */
 
   const logData = {
     ip,
@@ -172,16 +160,19 @@ app.use((req, res, next) => {
   };
 
   requestLogs.unshift(logData);
-
-  if (requestLogs.length > 100) {
-    requestLogs.pop();
-  }
+  if (requestLogs.length > 100) requestLogs.pop();
 
   endpointHistory.unshift(logData);
+  if (endpointHistory.length > 200) endpointHistory.pop();
 
-  if (endpointHistory.length > 200) {
-    endpointHistory.pop();
-  }
+  // ✅ FIX: liveLogs.unshift moved inside middleware where req is accessible
+  liveLogs.unshift({
+    type: 'request',
+    time: new Date().toLocaleTimeString('id-ID'),
+    message: `${ip} accessed ${req.path}`
+  });
+
+  if (liveLogs.length > 100) liveLogs.pop();
 
   console.log(
     chalk.hex('#00cec9')(`[ ${logData.time} ]`),
@@ -190,25 +181,19 @@ app.use((req, res, next) => {
     chalk.white(ip)
   );
 
-  /* AUTO CREATOR JSON */
-
   const originalJson = res.json;
 
   res.json = function (data) {
-
     if (
       typeof data === 'object' &&
       req.path !== '/endpoints' &&
       req.path !== '/set'
     ) {
-
       return originalJson.call(this, {
         creator: settings.creatorName || "Created Using SkyWings",
         ...data
       });
-
     }
-
     return originalJson.call(this, data);
   };
 
@@ -228,10 +213,7 @@ app.get('/set', (req, res) => {
 ================================= */
 
 app.get('/runtime', (req, res) => {
-
-  const uptimeSeconds =
-    Math.floor((Date.now() - serverStart) / 1000);
-
+  const uptimeSeconds = Math.floor((Date.now() - serverStart) / 1000);
   res.json({
     status: true,
     uptime_seconds: uptimeSeconds,
@@ -239,7 +221,6 @@ app.get('/runtime', (req, res) => {
     started_at: new Date(serverStart).toISOString(),
     total_request: global.totalreq
   });
-
 });
 
 /* ===============================
@@ -247,16 +228,11 @@ app.get('/runtime', (req, res) => {
 ================================= */
 
 app.get('/security-stats', (req, res) => {
-
   const now = Date.now();
-
   const blocked = Object.entries(blockedIPs)
     .map(([ip, expire]) => ({
       ip,
-      sisaDetik: Math.max(
-        0,
-        Math.floor((expire - now) / 1000)
-      )
+      sisaDetik: Math.max(0, Math.floor((expire - now) / 1000))
     }))
     .filter(v => v.sisaDetik > 0);
 
@@ -267,38 +243,25 @@ app.get('/security-stats', (req, res) => {
     rateLimit: RATE_LIMIT,
     logs: requestLogs.slice(0, 20)
   });
-
 });
 
 /* ===============================
    LIVE CONSOLE API
 ================================= */
 
+// ✅ FIX: Removed duplicate 'logs' key, fixed object syntax (missing comma before status)
 app.get('/live-logs', (req, res) => {
   res.json({
-    logs: liveLogs.slice(0, 50)
+    status: true,
     total_request: global.totalreq,
     logs: requestLogs,
+    live: liveLogs.slice(0, 50),
     history: endpointHistory
   });
-
 });
 
-liveLogs.unshift({
-  type: 'request',
-  time: new Date().toLocaleTimeString('id-ID'),
-  message: `${req.ip} accessed ${req.path}`
-});
+// ✅ FIX: Removed fetchSecurityStats / fetchLiveLogs / setInterval — these are frontend functions, not backend
 
-liveLogs.unshift({
-  type: 'blocked',
-  time: new Date().toLocaleTimeString('id-ID'),
-  message: `${req.ip} blocked for spam requests`
-});
-
-setInterval(fetchSecurityStats, 5000);
-fetchLiveLogs();
-setInterval(fetchLiveLogs, 2000);
 /* ===============================
    ENDPOINT LOADER
 ================================= */
@@ -309,80 +272,36 @@ let rawEndpoints = {};
 const apiFolder = path.join(__dirname, 'api');
 
 fs.readdirSync(apiFolder).forEach(file => {
-
   const fullPath = path.join(apiFolder, file);
 
   if (file.endsWith('.js')) {
-
     try {
-
       const routes = require(fullPath);
-
-      const handlers =
-        Array.isArray(routes)
-          ? routes
-          : [routes];
+      const handlers = Array.isArray(routes) ? routes : [routes];
 
       handlers.forEach(route => {
+        const { name, desc, category, path: routePath, run } = route;
 
-        const {
-          name,
-          desc,
-          category,
-          path: routePath,
-          run
-        } = route;
-
-        if (
-          name &&
-          desc &&
-          category &&
-          routePath &&
-          typeof run === 'function'
-        ) {
-
-          const cleanPath =
-            routePath.split('?')[0];
-
+        if (name && desc && category && routePath && typeof run === 'function') {
+          const cleanPath = routePath.split('?')[0];
           app.get(cleanPath, run);
 
-          if (!rawEndpoints[category]) {
-            rawEndpoints[category] = [];
-          }
+          if (!rawEndpoints[category]) rawEndpoints[category] = [];
 
-          rawEndpoints[category].push({
-            name,
-            desc,
-            path: routePath
-          });
-
+          rawEndpoints[category].push({ name, desc, path: routePath });
           totalRoutes++;
 
           console.log(
             chalk.hex('#55efc4')(`✔ Loaded: `) +
-            chalk.hex('#ffeaa7')(
-              `${cleanPath} (${file})`
-            )
+            chalk.hex('#ffeaa7')(`${cleanPath} (${file})`)
           );
-
         } else {
-
-          console.warn(
-            chalk.bgRed.white(
-              ` ⚠ Skipped invalid route in ${file}`
-            )
-          );
+          console.warn(chalk.bgRed.white(` ⚠ Skipped invalid route in ${file}`));
         }
-
       });
 
     } catch (err) {
-
-      console.error(
-        chalk.bgRed.white(
-          ` ❌ Error in ${file}: ${err.message}`
-        )
-      );
+      console.error(chalk.bgRed.white(` ❌ Error in ${file}: ${err.message}`));
     }
   }
 });
@@ -394,15 +313,8 @@ fs.readdirSync(apiFolder).forEach(file => {
 const endpoints = Object.keys(rawEndpoints)
   .sort((a, b) => a.localeCompare(b))
   .reduce((sorted, category) => {
-
-    sorted[category] =
-      rawEndpoints[category]
-        .sort((a, b) =>
-          a.name.localeCompare(b.name)
-        );
-
+    sorted[category] = rawEndpoints[category].sort((a, b) => a.name.localeCompare(b.name));
     return sorted;
-
   }, {});
 
 /* ===============================
@@ -418,17 +330,10 @@ app.get('/endpoints', (req, res) => {
 ================================= */
 
 app.get('/', (req, res) => {
-
   try {
-
-    res.sendFile(
-      path.join(__dirname, 'index.html')
-    );
-
+    res.sendFile(path.join(__dirname, 'index.html'));
   } catch (err) {
-
     console.log(err);
-
   }
 });
 
@@ -437,19 +342,8 @@ app.get('/', (req, res) => {
 ================================= */
 
 app.listen(PORT, () => {
-
-  console.log(
-    chalk.bgGreen.black(
-      ` 🚀 Server running on port ${PORT} `
-    )
-  );
-
-  console.log(
-    chalk.bgCyan.black(
-      ` 📦 Total Routes Loaded: ${totalRoutes} `
-    )
-  );
-
+  console.log(chalk.bgGreen.black(` 🚀 Server running on port ${PORT} `));
+  console.log(chalk.bgCyan.black(` 📦 Total Routes Loaded: ${totalRoutes} `));
 });
 
 /* ===============================
