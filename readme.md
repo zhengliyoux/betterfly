@@ -1,182 +1,145 @@
-# BetterFly
-
 > Modern, lightweight, and scalable project by Zhengliyoux.
 
 <p align="center">
   <img src="https://files.catbox.moe/0sk43i.jpg" alt="BetterFly Banner" width="100%" />
 </p>
+# BetterFly API
+
+> Simple REST API project for testing, development, and deployment experiments.
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/zhengliyoux/betterfly?style=for-the-badge" />
-  <img src="https://img.shields.io/github/forks/zhengliyoux/betterfly?style=for-the-badge" />
-  <img src="https://img.shields.io/github/license/zhengliyoux/betterfly?style=for-the-badge" />
-  <img src="https://img.shields.io/github/issues/zhengliyoux/betterfly?style=for-the-badge" />
+  <img src="https://img.shields.io/github/license/zhengliyoux/betterfly?style=for-the-badge">
+  <img src="https://img.shields.io/github/stars/zhengliyoux/betterfly?style=for-the-badge">
+  <img src="https://img.shields.io/github/forks/zhengliyoux/betterfly?style=for-the-badge">
+  <img src="https://img.shields.io/github/issues/zhengliyoux/betterfly?style=for-the-badge">
 </p>
 
 ---
 
-## ✨ About Project
+## 📖 About
 
-BetterFly adalah project open-source yang dibuat untuk membantu developer membangun workflow yang lebih cepat, efisien, dan modern.
+BetterFly adalah project REST API sederhana yang dibuat untuk:
 
-Project ini fokus pada:
+- testing API
+- belajar backend
+- eksperimen deployment
+- percobaan Vercel serverless
+- development pribadi
 
-- ⚡ Fast performance
-- 🧩 Modular architecture
-- 🔒 Easy maintenance
-- 🌍 Open-source flexibility
-- 🚀 Better developer experience
-
----
+Project ini masih dalam tahap pengembangan.
 
 ---
 
-# 🚀 Features
+# ⚡ Features
 
-- ✅ Simple setup
-- ✅ Clean architecture
-- ✅ Easy customization
-- ✅ Fast performance
-- ✅ Open-source
+- ✅ REST API
+- ✅ Vercel deployment support
+- ✅ Lightweight project
+- ✅ Simple structure
+- ✅ Fast testing
 - ✅ Beginner friendly
+
+---
+
+# 📂 Project Structure
+
+```bash
+betterfly/
+├── api/
+├── index.js
+├── index.html
+├── package.json
+├── vercel.json
+├── LICENSE
+└── README.md
+```
 
 ---
 
 # 📦 Installation
 
-## Clone Repository
+Clone repository:
 
 ```bash
 git clone https://github.com/zhengliyoux/betterfly.git
 cd betterfly
 ```
 
-## Install Dependencies
-
-### npm
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-### yarn
+---
+
+# ▶️ Run Project
 
 ```bash
-yarn install
+npm start
 ```
 
-### pnpm
+atau:
 
 ```bash
-pnpm install
+node index.js
 ```
 
 ---
 
-# ▶️ Running Project
+# 🌐 Deployment
+
+Project ini support deployment menggunakan:
+
+- Vercel
+- Node.js
+- Serverless API
+
+Deploy cepat:
 
 ```bash
-npm run dev
-```
-
-Atau:
-
-```bash
-yarn dev
-```
-
----
-
-# 🏗️ Project Structure
-
-```bash
-betterfly/
-├── src/
-├── public/
-├── assets/
-├── components/
-├── pages/
-├── package.json
-└── README.md
+vercel
 ```
 
 ---
 
-# ⚙️ Configuration
+# 🧪 API Testing
 
-Buat file `.env`:
+Kamu bisa test API menggunakan:
 
-```env
-PORT=3000
-API_URL=https://your-api.com
+- Postman
+- Thunder Client
+- Browser
+- Fetch API
+
+Contoh request:
+
+```bash
+GET /api
 ```
 
 ---
 
 # 🛠️ Tech Stack
 
-Tambahkan stack yang digunakan:
-
-- Frontend: React / Vue / Next.js
-- Backend: Node.js / Express
-- Database: MongoDB / PostgreSQL
-- Styling: TailwindCSS
-- Deployment: Vercel / Docker
+- Node.js
+- JavaScript
+- REST API
+- Vercel
 
 ---
 
-# 📚 Usage Example
+# ⚠️ Disclaimer
 
-```bash
-npm run build
-npm start
-```
+Repository ini dibuat hanya untuk testing dan development.
 
----
-
-# 🧪 Testing
-
-```bash
-npm run test
-```
-
----
-
-# 📈 Roadmap
-
-- [ ] Authentication
-- [ ] Dashboard UI
-- [ ] API integration
-- [ ] Docker support
-- [ ] CI/CD pipeline
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork repository
-2. Create new branch
-3. Commit changes
-4. Push branch
-5. Open Pull Request
-
----
-
-# 🐛 Bug Report
-
-Jika menemukan bug atau ingin request fitur:
-
-- Open issue di GitHub
-- Jelaskan bug secara detail
-- Sertakan screenshot jika perlu
+Please don't steal or rename the code without permission from the repository owner.
 
 ---
 
 # 📄 License
 
-Project ini menggunakan lisensi MIT.
+Licensed under Apache-2.0 License.
 
 ---
 
@@ -184,17 +147,18 @@ Project ini menggunakan lisensi MIT.
 
 ### Zhengliyoux
 
-- GitHub: https://github.com/zhengliyoux
+- GitHub:
+  https://github.com/zhengliyoux
 
 ---
 
 # ⭐ Support
 
-Kalau project ini membantu:
+Jika project ini membantu:
 
 - ⭐ Star repository
-- 🍴 Fork project
-- 🧠 Share ke developer lain
+- 🍴 Fork repository
+- 📢 Share ke developer lain
 
 ---
 
