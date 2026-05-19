@@ -3,7 +3,7 @@
 > Modern, lightweight, and scalable project by Zhengliyoux.
 
 <p align="center">
-  <img src="./assets/banner.png" alt="BetterFly Banner" width="100%" />
+  <img src="https://files.catbox.moe/0sk43i.jpg" alt="BetterFly Banner" width="100%" />
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@ Project ini fokus pada:
 Tambahkan screenshot atau GIF demo di sini.
 
 ```md
-![Preview](./assets/preview.png)
+
 ```
 
 ---
