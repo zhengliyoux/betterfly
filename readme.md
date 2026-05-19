@@ -34,7 +34,9 @@ Project ini fokus pada:
 Tambahkan screenshot atau GIF demo di sini.
 
 ```md
-
+<p align="center">
+  <img src="https://files.catbox.moe/0sk43i.jpg" alt="BetterFly Banner" width="100%" />
+</p>
 ```
 
 ---
