@@ -277,7 +277,7 @@ app.get('/security-stats', (req, res) => {
 app.get('/live-logs', (req, res) => {
   res.json({
     logs: liveLogs.slice(0, 50)
-    status: true,
+    status: true
     total_request: global.totalreq,
     logs: requestLogs,
     history: endpointHistory
