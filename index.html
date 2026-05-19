@@ -40,65 +40,19 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .nav-item{text-decoration:none;color:var(--gray);display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:14px;transition:.25s;font-weight:600;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-size:.95rem;}
 .nav-item:hover,.nav-item.active{background:rgba(59,130,246,.12);color:white;}
 .nav-item i{width:20px;}
+
 /* LIVE SECURITY CONSOLE */
-.live-console{
-  background:#020617;
-  border:1px solid rgba(255,255,255,.06);
-  border-radius:18px;
-  padding:14px;
-  height:220px;
-  overflow-y:auto;
-  font-family:'JetBrains Mono',monospace;
-  font-size:.78rem;
-  scroll-behavior:smooth;
-}
+.live-console{background:#020617;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px;height:220px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:.78rem;scroll-behavior:smooth;}
+.live-console::-webkit-scrollbar{width:6px;}
+.live-console::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px;}
+.console-line{margin-bottom:8px;line-height:1.5;word-break:break-word;animation:fadeConsole .25s ease;}
+.console-normal{color:#94a3b8;}
+.console-success{color:var(--green);}
+.console-warn{color:var(--warning);}
+.console-danger{color:var(--red);}
+.console-request{color:var(--cyan);}
+@keyframes fadeConsole{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
 
-.live-console::-webkit-scrollbar{
-  width:6px;
-}
-
-.live-console::-webkit-scrollbar-thumb{
-  background:rgba(255,255,255,.12);
-  border-radius:999px;
-}
-
-.console-line{
-  margin-bottom:8px;
-  line-height:1.5;
-  word-break:break-word;
-  animation:fadeConsole .25s ease;
-}
-
-.console-normal{
-  color:#94a3b8;
-}
-
-.console-success{
-  color:var(--green);
-}
-
-.console-warn{
-  color:var(--warning);
-}
-
-.console-danger{
-  color:var(--red);
-}
-
-.console-request{
-  color:var(--cyan);
-}
-
-@keyframes fadeConsole{
-  from{
-    opacity:0;
-    transform:translateY(5px);
-  }
-  to{
-    opacity:1;
-    transform:translateY(0);
-  }
-}
 /* SECURITY PANEL DI SIDEBAR */
 .sidebar-security{margin-top:20px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:16px;padding:14px;}
 .sidebar-security .sec-title{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:10px;display:flex;align-items:center;gap:7px;}
@@ -325,7 +279,6 @@ body.light .popup{background:#fff;}
     </button>
   </div>
 
-  <!-- SECURITY MINI PANEL DI SIDEBAR (DATA ASLI) -->
   <div class="sidebar-security" style="margin-top:20px;">
     <div class="sec-title">
       <i class="fa-solid fa-shield-halved"></i> Security Monitor
@@ -375,7 +328,6 @@ body.light .popup{background:#fff;}
   <!-- HOME -->
   <div id="section-home">
 
-    <!-- STATS — 4 kolom, runtime asli dari server -->
     <div class="stats-grid">
       <div class="stats-card">
         <div class="stats-icon"><i class="fa-solid fa-bolt"></i></div>
@@ -443,7 +395,7 @@ body.light .popup{background:#fff;}
 
       <div>
 
-        <!-- SERVER STATUS (ASLI) -->
+        <!-- SERVER STATUS -->
         <div class="info-card">
           <div class="info-top">
             <div class="info-icon">
@@ -467,7 +419,7 @@ body.light .popup{background:#fff;}
           </div>
         </div>
 
-        <!-- SECURITY (ASLI) -->
+        <!-- SECURITY -->
         <div class="security-card">
           <div class="security-header">
             <h3>
@@ -483,25 +435,21 @@ body.light .popup{background:#fff;}
             <div class="no-blocks">Tidak ada IP yang diblokir saat ini ✓</div>
           </div>
         </div>
-<!-- LIVE SECURITY CONSOLE -->
-<div class="info-card" style="margin-top:20px;padding:18px;">
-  <div class="security-header">
-    <h3>
-      <i class="fa-solid fa-terminal shield-icon"></i>
-      Live Security Console
-    </h3>
 
-    <span class="security-badge badge-safe">
-      LIVE
-    </span>
-  </div>
+        <!-- LIVE SECURITY CONSOLE -->
+        <div class="info-card" style="margin-top:20px;padding:18px;">
+          <div class="security-header">
+            <h3>
+              <i class="fa-solid fa-terminal shield-icon"></i>
+              Live Security Console
+            </h3>
+            <span class="security-badge badge-safe">LIVE</span>
+          </div>
+          <div class="live-console" id="liveConsole">
+            <div class="console-line console-normal">Waiting server logs...</div>
+          </div>
+        </div>
 
-  <div class="live-console" id="liveConsole">
-    <div class="console-line console-normal">
-      Waiting server logs...
-    </div>
-  </div>
-</div>
       </div>
     </div>
   </div>
@@ -645,7 +593,7 @@ body.light .popup{background:#fff;}
     copyText(document.getElementById('baseUrlDisplay').textContent, this);
   });
 
-  // ===== RUNTIME — FETCH DARI SERVER ASLI =====
+  // ===== RUNTIME FORMAT =====
   function formatRuntime(seconds) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -653,11 +601,41 @@ body.light .popup{background:#fff;}
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
 
+  // ===== RECONNECTION STATE =====
+  let serverOffline = false;
+  let normalRuntimeInterval = null;
+  let normalSecurityInterval = null;
+  let retryInterval = null;
+
+  // ===== LIVE CONSOLE =====
+  function addConsoleLog(message, type = 'normal') {
+    const console_ = document.getElementById('liveConsole');
+    const line = document.createElement('div');
+    line.className = `console-line console-${type}`;
+    const time = new Date().toLocaleTimeString('id-ID');
+    line.textContent = `[${time}] ${message}`;
+    // hapus placeholder awal
+    const placeholder = console_.querySelector('.console-normal');
+    if (placeholder && placeholder.textContent.includes('Waiting')) placeholder.remove();
+    console_.prepend(line);
+    // batasi 60 baris
+    while (console_.children.length > 60) console_.removeChild(console_.lastChild);
+  }
+
+  // ===== FETCH RUNTIME =====
   async function fetchRuntime() {
     try {
       const res = await fetch('/runtime');
       if (!res.ok) throw new Error();
       const data = await res.json();
+
+      // Server online kembali setelah offline
+      if (serverOffline) {
+        serverOffline = false;
+        if (retryInterval) { clearInterval(retryInterval); retryInterval = null; }
+        addConsoleLog('Server online kembali — reconnected!', 'success');
+        startNormalIntervals();
+      }
 
       const rt = data.uptime_formatted || formatRuntime(data.uptime_seconds || 0);
       document.getElementById('statRuntime').textContent = rt;
@@ -669,21 +647,29 @@ body.light .popup{background:#fff;}
           'Started: ' + d.toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
       }
 
-      // Status online
       document.getElementById('serverDot').classList.remove('offline-dot');
       document.getElementById('serverStatusText').textContent = 'Server Online — Berjalan Normal';
       document.getElementById('sidebarStatus').innerHTML = '<span class="live-dot"></span> Online';
 
     } catch {
+      // Server offline — mulai retry mode
+      if (!serverOffline) {
+        serverOffline = true;
+        if (normalRuntimeInterval) { clearInterval(normalRuntimeInterval); normalRuntimeInterval = null; }
+        if (normalSecurityInterval) { clearInterval(normalSecurityInterval); normalSecurityInterval = null; }
+        addConsoleLog('Server offline — mencoba reconnect...', 'danger');
+        startRetryInterval();
+      }
+
       document.getElementById('statRuntime').textContent = 'Offline';
       document.getElementById('sidebarRuntime').textContent = '—';
       document.getElementById('serverDot').classList.add('offline-dot');
-      document.getElementById('serverStatusText').textContent = 'Server tidak merespons';
+      document.getElementById('serverStatusText').textContent = 'Server offline — Mencoba reconnect...';
       document.getElementById('sidebarStatus').innerHTML = '<span class="live-dot offline-dot"></span> Offline';
     }
   }
 
-  // ===== SECURITY STATS — FETCH DARI SERVER ASLI =====
+  // ===== FETCH SECURITY STATS =====
   async function fetchSecurityStats() {
     try {
       const res = await fetch('/security-stats');
@@ -694,7 +680,6 @@ body.light .popup{background:#fff;}
       document.getElementById('statBlocked').textContent = count;
       document.getElementById('sidebarBlocked').textContent = count;
 
-      // Badge
       const badge = document.getElementById('secBadge');
       if (count === 0) {
         badge.textContent = 'SAFE';
@@ -702,9 +687,9 @@ body.light .popup{background:#fff;}
       } else {
         badge.textContent = `${count} BLOCKED`;
         badge.className = 'security-badge badge-warn';
+        addConsoleLog(`${count} IP diblokir aktif`, 'warn');
       }
 
-      // Blocked list
       const list = document.getElementById('blockedList');
       if (!data.blockedIPs || data.blockedIPs.length === 0) {
         list.innerHTML = '<div class="no-blocks">Tidak ada IP yang diblokir saat ini ✓</div>';
@@ -717,10 +702,34 @@ body.light .popup{background:#fff;}
         `).join('');
       }
 
+      // Tampilkan log request terbaru di console
+      if (data.logs && data.logs.length > 0) {
+        const latest = data.logs[0];
+        addConsoleLog(`${latest.method} ${latest.path} — ${latest.ip}`, 'request');
+      }
+
     } catch {
       document.getElementById('statBlocked').textContent = '—';
       document.getElementById('sidebarBlocked').textContent = '—';
     }
+  }
+
+  // ===== INTERVAL MANAGEMENT =====
+  function startNormalIntervals() {
+    // Pastikan tidak double-interval
+    if (normalRuntimeInterval) clearInterval(normalRuntimeInterval);
+    if (normalSecurityInterval) clearInterval(normalSecurityInterval);
+    normalRuntimeInterval = setInterval(fetchRuntime, 1000);
+    normalSecurityInterval = setInterval(fetchSecurityStats, 5000);
+  }
+
+  function startRetryInterval() {
+    if (retryInterval) clearInterval(retryInterval);
+    // Retry tiap 3 detik saat offline
+    retryInterval = setInterval(async () => {
+      await fetchRuntime();
+      if (!serverOffline) await fetchSecurityStats();
+    }, 3000);
   }
 
   // ===== LOAD API DATA =====
@@ -911,17 +920,19 @@ body.light .popup{background:#fff;}
     } finally {
       spinner.style.display = 'none';
       responseWrap.classList.remove('d-none');
-      // refresh security stats setelah request (mungkin ada yang kena block)
       fetchSecurityStats();
     }
   });
 
-  // ===== INIT & INTERVALS =====
-  // Fetch runtime & security saat load, lalu update rutin
+  // ===== INIT =====
   await Promise.all([fetchRuntime(), fetchSecurityStats()]);
 
-  setInterval(fetchRuntime, 1000);          // runtime update tiap detik
-  setInterval(fetchSecurityStats, 5000);    // security update tiap 5 detik
+  // Mulai interval normal (hanya jika server online)
+  if (!serverOffline) {
+    startNormalIntervals();
+  }
+
+  addConsoleLog('Dashboard initialized', 'success');
 
   setTimeout(() => {
     document.getElementById('loader').classList.add('hide');
@@ -934,4 +945,4 @@ body.light .popup{background:#fff;}
 })();
 </script>
 </body>
-      </html>
+</html>
