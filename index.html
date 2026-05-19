@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title id="page">Phoenix Vision Api</title>
+  <meta name="description" content="Phoenix Vision adalah lightweight API untuk WhatsApp Bots dengan performa cepat, stabil, dan mudah digunakan.">
+  <meta property="og:title" content="Phoenix Vision Api`s" />
+  <meta property="og:image" content="https://files.catbox.moe/0sk43i.jpg" />
+  <link id="icon" rel="icon" href="https://files.catbox.moe/0sk43i.jpg" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    :root {
+      --bg:          #080c14;
+      --bg2:         #0d1220;
+      --bg3:         #111827;
+      --surface:     #141e30;
+      --surface2:    #1a2540;
+      --border:      rgba(0,224,255,0.12);
+      --border2:     rgba(0,224,255,0.25);
+      --accent:      #00e0ff;
+      --accent2:     #7c3aff;
+      --accent3:     #ff3aad;
+      --text:        #e8f4f8;
+      --text2:       #8ca4b8;
+      --text3:       #4d6578;
+      --success:     #00e5a0;
+      --danger:      #ff4466;
+      --warning:     #ffb800;
+      --radius:      10px;
+      --radius2:     16px;
+      --glow:        0 0 20px rgba(0,224,255,0.18);
+      --glow2:       0 0 40px rgba(0,224,255,0.10);
+      --font-display: 'Outfit', sans-serif;
+      --font-mono:    'Space Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    ::selection { background: rgba(0,224,255,0.25); color: #fff; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ─── ANIMATED GRID BACKGROUND ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,224,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,224,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── GLOW ORBS ─── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      animation: orbFloat 12s ease-in-out infinite;
+    }
+    .orb-1 { width: 500px; height: 500px; background: rgba(124,58,255,0.12); top: -100px; right: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: rgba(0,224,255,0.08); bottom: 20%; left: -80px; animation-delay: -4s; }
+    .orb-3 { width: 300px; height: 300px; background: rgba(255,58,173,0.07); bottom: -50px; right: 30%; animation-delay: -8s; }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-30px) scale(1.05); }
+    }
+
+    /* ─── LOADING ─── */
+    #loading-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      z-index: 9999;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+    #loading-screen.hidden { opacity: 0; visibility: hidden; }
+
+    .loader-ring {
+      position: relative;
+      width: 70px; height: 70px;
+    }
+    .loader-ring::before, .loader-ring::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid transparent;
+    }
+    .loader-ring::before {
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+    .loader-ring::after {
+      border-bottom-color: var(--accent2);
+      animation: spin 1.5s linear infinite reverse;
+      inset: 8px;
+    }
+    .loader-dot {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px; height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--accent);
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .loading-text {
+      margin-top: 20px;
+      font-size: 0.85em;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--text2);
+      font-family: var(--font-mono);
+      animation: blink 1.2s ease-in-out infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100%{opacity:1;transform:translate(-50%,-50%) scale(1)} 50%{opacity:.5;transform:translate(-50%,-50%) scale(1.4)} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ─── NAVBAR ─── */
+    .navbar {
+      position: sticky; top: 0;
+      background: rgba(8,12,20,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 0 24px;
+    }
+    .navbar-container {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      max-width: 1280px; margin: 0 auto;
+      height: 64px; gap: 16px;
+    }
+    .brand {
+      font-size: 1.15em; font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      text-decoration: none;
+      white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .brand-dot {
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .search-wrapper {
+      position: relative;
+      flex: 1; max-width: 360px;
+      display: flex; align-items: center;
+    }
+    .search-wrapper i {
+      position: absolute; left: 14px;
+      color: var(--text3); font-size: 0.85em;
+      pointer-events: none;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 9px 14px 9px 38px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-display);
+      font-size: 0.875em;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #searchInput:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,224,255,0.1); }
+    #searchInput::placeholder { color: var(--text3); }
+
+    .navbar-right { display: flex; align-items: center; gap: 8px; }
+
+    .nav-icon-btn {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95em;
+      transition: all 0.2s;
+    }
+    .nav-icon-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: var(--glow); }
+
+    .btn-primary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #fff;
+      border: none; border-radius: 8px;
+      font-family: var(--font-display);
+      font-size: 0.85em; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    /* ─── CONTAINER ─── */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+      position: relative; z-index: 1;
+      display: none;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      text-align: center;
+      padding: 64px 24px 56px;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      background: rgba(0,224,255,0.08);
+      border: 1px solid rgba(0,224,255,0.2);
+      border-radius: 99px;
+      font-size: 0.75em;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      margin-bottom: 28px;
+    }
+    .hero-badge i { font-size: 0.9em; }
+    .hero h1 {
+      font-size: clamp(2.2em, 5vw, 4em);
+      font-weight: 900;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+    }
+    .hero p {
+      max-width: 580px; margin: 0 auto 40px;
+      color: var(--text2);
+      font-size: 1.05em;
+      line-height: 1.7;
+    }
+    .hero-stats {
+      display: flex; justify-content: center; gap: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius2);
+      font-weight: 700;
+      font-size: 0.95em;
+      color: var(--accent);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+    .stat-pill:hover { transform: translateY(-3px); box-shadow: var(--glow); }
+    .stat-pill i { color: var(--text2); font-size: 0.9em; }
+    .stat-pill span { color: var(--text2); font-weight: 400; font-size: 0.85em; }
+
+    /* ─── DIVIDER ─── */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border2), transparent);
+      margin: 40px 0;
+    }
+
+    /* ─── TABS ─── */
+    .tabs-wrapper {
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 28px;
+      scrollbar-width: none;
+    }
+    .tabs-wrapper::-webkit-scrollbar { display: none; }
+    .tabs {
+      display: flex; gap: 8px;
+      width: max-content;
+    }
+    .tab {
+      padding: 8px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text2);
+      font-family: var(--font-display);
+      font-size: 0.85em; font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab:hover { border-color: var(--accent); color: var(--accent); }
+    .tab.active {
+      background: rgba(0,224,255,0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 16px rgba(0,224,255,0.12);
+    }
+
+    /* ─── API GRID ─── */
+    .api-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    /* ─── API CARD ─── */
+    .api-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      padding: 22px;
+      display: flex; flex-direction: column;
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: cardIn 0.5s forwards;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .api-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .api-card:hover { border-color: var(--border2); box-shadow: var(--glow2); transform: translateY(-3px); }
+    .api-card:hover::before { opacity: 1; }
+
+    @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
+
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+
+    .api-name {
+      font-size: 0.95em; font-weight: 600;
+      color: var(--text); line-height: 1.4;
+    }
+    .api-desc {
+      font-size: 0.82em;
+      color: var(--text2);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .method-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 9px;
+      border-radius: 5px;
+      font-family: var(--font-mono);
+      font-size: 0.68em;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .method-get  { background: rgba(0,229,160,0.12); color: var(--success); border: 1px solid rgba(0,229,160,0.25); }
+    .method-post { background: rgba(0,224,255,0.12); color: var(--accent);  border: 1px solid rgba(0,224,255,0.25); }
+    .method-put  { background: rgba(255,184,0,0.12); color: var(--warning); border: 1px solid rgba(255,184,0,0.25); }
+    .method-delete{ background: rgba(255,68,102,0.12); color: var(--danger); border: 1px solid rgba(255,68,102,0.25); }
+
+    .play-button {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 9px 16px;
+      background: rgba(0,224,255,0.07);
+      border: 1px solid rgba(0,224,255,0.2);
+      border-radius: var(--radius);
+      color: var(--accent);
+      font-family: var(--font-display);
+      font-size: 0.82em; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      align-self: flex-start;
+    }
+    .play-button:hover {
+      background: rgba(0,224,255,0.14);
+      border-color: var(--accent);
+      box-shadow: 0 0 16px rgba(0,224,255,0.15);
+      transform: translateX(3px);
+    }
+
+    /* ─── MODAL ─── */
+    .modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.25s, visibility 0.25s;
+      padding: 16px;
+    }
+    .modal.active { opacity: 1; visibility: visible; }
+
+    .modal-dialog {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius2);
+      width: 100%; max-width: 660px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.96) translateY(10px);
+      opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+    }
+    .modal.active .modal-dialog { transform: scale(1) translateY(0); opacity: 1; }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      position: sticky; top: 0;
+      background: var(--bg2);
+      z-index: 10;
+    }
+    .modal-title-area h5 {
+      font-size: 1.05em; font-weight: 600;
+      color: var(--text); margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .modal-title-area p {
+      font-size: 0.82em; color: var(--text2);
+    }
+    .btn-close {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text2); cursor: pointer;
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1em; flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .btn-close:hover { border-color: var(--danger); color: var(--danger); }
+
+    .modal-body { padding: 20px 24px; }
+
+    /* ─── ENDPOINT URL BOX ─── */
+    .endpoint-box {
+      display: flex; align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      gap: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .endpoint-box-label {
+      font-family: var(--font-mono);
+      font-size: 0.72em;
+      color: var(--accent);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    #copyEndpointText {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 0.78em;
+      color: var(--text2);
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    #copyBtn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text2); cursor: pointer;
+      padding: 5px 12px; border-radius: 6px;
+      font-size: 0.78em; font-family: var(--font-display);
+      display: flex; align-items: center; gap: 6px;
+      white-space: nowrap; flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    #copyBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ─── FORM ─── */
+    #paramForm {
+      display: flex; flex-direction: column; gap: 14px;
+      margin-bottom: 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-size: 0.8em; font-weight: 600;
+      color: var(--text2); letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+    .form-label .required { color: var(--danger); margin-left: 2px; }
+
+    #paramForm input[type="text"],
+    #paramForm label {
+      font-family: var(--font-display);
+    }
+    #paramForm label {
+      font-size: 0.8em; font-weight: 600;
+      color: var(--text2); letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+    #paramForm input[type="text"] {
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.9em;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #paramForm input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,224,255,0.1);
+    }
+    #paramForm input[type="text"]::placeholder { color: var(--text3); }
+    #paramForm p { color: var(--text3); font-size: 0.85em; }
+
+    #submitParamBtn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, rgba(0,224,255,0.15), rgba(124,58,255,0.15));
+      border: 1px solid rgba(0,224,255,0.3);
+      border-radius: var(--radius);
+      color: var(--accent);
+      font-family: var(--font-display);
+      font-size: 0.9em; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 16px;
+    }
+    #submitParamBtn:hover {
+      background: linear-gradient(135deg, rgba(0,224,255,0.22), rgba(124,58,255,0.22));
+      box-shadow: 0 0 20px rgba(0,224,255,0.15);
+    }
+
+    /* ─── LOADING SPINNER (modal) ─── */
+    .loading-spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 24px auto;
+      display: none;
+    }
+
+    /* ─── RESPONSE BOX ─── */
+    #apiResponseContent {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+      line-height: 1.7;
+      max-height: 320px;
+      overflow-y: auto;
+      color: var(--success);
+      white-space: pre-wrap;
+      word-break: break-all;
+      transition: all 0.2s;
+    }
+    #apiResponseContent.d-none { display: none; }
+    #apiResponseContent.error { color: var(--danger); }
+
+    /* ─── DONATE MODAL ─── */
+    .donation-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 300;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+      padding: 16px;
+    }
+    .donation-modal.active { opacity: 1; visibility: visible; }
+
+    .donation-modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius2);
+      padding: 36px 28px;
+      text-align: center;
+      width: 100%; max-width: 420px;
+      position: relative;
+      transform: scale(0.94);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .donation-modal.active .donation-modal-content { transform: scale(1); opacity: 1; }
+
+    .donation-modal-content h3 {
+      font-size: 1.4em; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .donation-modal-content p { color: var(--text2); font-size: 0.9em; line-height: 1.7; margin-bottom: 20px; }
+    .donation-modal-content img {
+      max-width: 75%; border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      cursor: zoom-in;
+      transition: transform 0.3s;
+    }
+    .donation-modal-content img.zoomed { transform: scale(1.5); cursor: zoom-out; }
+    .donation-close {
+      position: absolute; top: 14px; right: 14px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text2); cursor: pointer;
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1em; transition: all 0.2s;
+    }
+    .donation-close:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      position: relative; z-index: 1;
+    }
+    .footer-links {
+      display: flex; justify-content: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .footer-links a {
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      font-size: 1em;
+      transition: all 0.2s;
+    }
+    .footer-links a:hover { border-color: var(--accent); color: var(--accent); box-shadow: var(--glow); }
+    .footer-text { color: var(--text3); font-size: 0.8em; }
+    .footer-text span { color: var(--accent); }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--text3);
+    }
+    .empty-state i { font-size: 2.5em; margin-bottom: 16px; display: block; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      .navbar-container { height: auto; padding: 12px 0; flex-wrap: wrap; gap: 10px; }
+      .search-wrapper { max-width: 100%; order: 3; }
+      .hero { padding: 40px 16px 36px; }
+      .container { padding: 20px 16px 48px; }
+    }
+    @media (max-width: 480px) {
+      .api-list { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.9em; }
+      .stat-pill { padding: 10px 16px; font-size: 0.85em; }
+    }
+
+    /* ─── HIDE FORM ANIMATION ─── */
+    .modal-body.hide-form-elements #paramForm,
+    .modal-body.hide-form-elements #submitParamBtn {
+      max-height: 0; overflow: hidden;
+      opacity: 0; margin: 0; padding: 0;
+      pointer-events: none;
+      transition: max-height 0.4s ease, opacity 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader-ring"><div class="loader-dot"></div></div>
+    <div class="loading-text">Initializing</div>
+  </div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <a class="brand" href="#">
+        <div class="brand-dot"></div>
+        <span id="navname">Phoenix Vision Api</span>
+      </a>
+      <div class="search-wrapper">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Search endpoints…">
+      </div>
+      <div class="navbar-right" id="navbar-right">
+        <button id="themeToggle" class="nav-icon-btn" aria-label="Toggle Theme">
+          <i class="fas fa-adjust"></i>
+        </button>
+        <a href="https://vt.tiktok.com/ZSxrYW9hc/" class="btn-primary" target="_blank">
+          <i class="fab fa-tiktok"></i> Video Galau
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container" id="main-container">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge">
+        <i class="fas fa-circle"></i>
+        <span>Phoenix Api Docs</span>
+      </div>
+      <h1 id="apiTitle">Phoenix Vision API</h1>
+      <p>A lightweight, fast, and stable API platform for full-featured WhatsApp Bot integration. Explore endpoints, test in-browser, and integrate with ease.</p>
+      <div class="hero-stats">
+        <div class="stat-pill" id="totalEndpoints">
+          <i class="fas fa-bolt"></i>
+          <strong>—</strong>
+          <span>Endpoints</span>
+        </div>
+        <div class="stat-pill" id="totalCategories">
+          <i class="fas fa-th-large"></i>
+          <strong>—</strong>
+          <span>Categories</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Tabs + API List -->
+    <section class="content">
+      <div class="tabs-wrapper">
+        <div class="tabs" id="tabs"></div>
+      </div>
+      <div id="api-list" class="api-list"></div>
+    </section>
+
+  </div>
+
+  <!-- API Response Modal -->
+  <div class="modal" id="apiResponseModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-area">
+          <h5 id="modalEndpointTitle"></h5>
+          <p id="desc">Detailed information and example usage for this endpoint.</p>
+        </div>
+        <button id="btn-close" class="btn-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Endpoint URL display -->
+        <div class="endpoint-box">
+          <span class="endpoint-box-label">URL</span>
+          <span id="copyEndpointText">Endpoint will appear here</span>
+          <button id="copyBtn"><i class="far fa-copy"></i> Copy</button>
+        </div>
+        <!-- Param Form -->
+        <form id="paramForm"></form>
+        <button id="submitParamBtn" type="button">
+          <i class="fas fa-paper-plane"></i> Send Request
+        </button>
+        <!-- Loading & Response -->
+        <div id="apiResponseLoading" class="loading-spinner"></div>
+        <div id="apiResponseContent" class="d-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donation Modal -->
+  <div class="donation-modal" id="donationModal">
+    <div class="donation-modal-content">
+      <button class="donation-close" onclick="closeDonationModal()"><i class="fas fa-times"></i></button>
+      <h3>Support Developerz</h3>
+      <p>Api Ini Di Dukung Penuh Oleh Putra.<br>Jika Anda Ada Sedikit Rezeki, Silahkan Donate sebagai Support Developerz.</p>
+      <img id="qrisImage" src="https://files.catbox.moe/0sk43i.jpg" alt="QRIS Donation">
+      <p style="font-size:0.8em; color:var(--text3)">Setiap Donasi Menambah Dukungan!</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-links">
+      <a href="https://t.me/ZepraxK4vren" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+      <a href="https://github.com/zhengliyoux" aria-label="GitHub"><i class="fab fa-github"></i></a>
+      <a href="https://www.instagram.com/yoalahhasu?igsh=MTVobGsydHVkbTdidg==" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+    </div>
+    <p class="footer-text">&copy; <span id="currentYear"></span> <span>Phoenix Vision</span> × SkyWings — All rights reserved.</p>
+  </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const loadingScreen   = document.getElementById('loading-screen');
+  const container       = document.getElementById('main-container');
+  const tabsContainer   = document.getElementById('tabs');
+  const apiList         = document.getElementById('api-list');
+  const paramForm       = document.getElementById('paramForm');
+  const submitBtn       = document.getElementById('submitParamBtn');
+  const modal           = document.getElementById('apiResponseModal');
+  const modalBody       = document.getElementById('modalBody');
+  const modalTitle      = document.getElementById('modalEndpointTitle');
+  const responseEl      = document.getElementById('apiResponseContent');
+  const loadingEl       = document.getElementById('apiResponseLoading');
+  const copyBtn         = document.getElementById('copyBtn');
+  const donationModal   = document.getElementById('donationModal');
+  const totalEpEl       = document.getElementById('totalEndpoints');
+  const totalCatEl      = document.getElementById('totalCategories');
+
+  let currentEndpoint = '';
+  let settings = {}, apis = {};
+
+  // ─── Year ───
+  document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+  // ─── Hide loading ───
+  const hideLoading = () => {
+    setTimeout(() => {
+      container.style.display = 'block';
+      loadingScreen.classList.add('hidden');
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        if (!localStorage.getItem('donationShown')) {
+          donationModal.classList.add('active');
+          localStorage.setItem('donationShown', 'true');
+        }
+      }, 650);
+    }, 1400);
+  };
+
+  // ─── Donation ───
+  window.closeDonationModal = () => donationModal.classList.remove('active');
+  donationModal.addEventListener('click', e => { if (e.target === donationModal) closeDonationModal(); });
+  document.getElementById('qrisImage').addEventListener('click', function() { this.classList.toggle('zoomed'); });
+
+  // ─── Donate nav button ───
+  const donateBtn = document.createElement('button');
+  donateBtn.className = 'nav-icon-btn';
+  donateBtn.setAttribute('aria-label', 'Donate');
+  donateBtn.innerHTML = '<i class="fas fa-heart" style="color:var(--accent3)"></i>';
+  donateBtn.addEventListener('click', () => donationModal.classList.add('active'));
+  document.getElementById('navbar-right').prepend(donateBtn);
+
+  // ─── Theme (simplified for dark-only, keeps toggle) ───
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    // Subtle brightness shift for accessibility
+    document.body.style.filter = document.body.style.filter === 'brightness(0.9)' ? '' : 'brightness(0.9)';
+  });
+
+  // ─── Helpers ───
+  function extractParams(path) {
+    if (!path || !path.includes('?')) return [];
+    return (path.split('?')[1] || '').split('&').map(pair => {
+      const [name] = pair.split('=');
+      return name ? { name, required: true, placeholder: `Enter ${name}` } : null;
+    }).filter(Boolean);
+  }
+  function determineMethod() { return 'GET'; }
+  function countEndpoints(obj) { return Object.values(obj).reduce((a,v) => a + (Array.isArray(v) ? v.length : 0), 0); }
+
+  // ─── Load data ───
+  try {
+    const [sRes, aRes] = await Promise.all([fetch('/set'), fetch('/endpoints')]);
+    if (!sRes.ok) throw new Error(`/set: ${sRes.status}`);
+    if (!aRes.ok) throw new Error(`/endpoints: ${aRes.status}`);
+    settings = await sRes.json();
+    apis     = await aRes.json();
+
+    document.getElementById('navname').textContent  = settings.creatorName || 'Putra';
+    document.getElementById('apiTitle').textContent = settings.apiTitle    || 'Phoenix Vision Api';
+    document.title = settings.apiTitle || 'PHOENIX APIKEYS';
+
+    const ep  = countEndpoints(apis);
+    const cat = Object.keys(apis).length;
+    totalEpEl.innerHTML  = `<i class="fas fa-bolt"></i><strong>${ep}</strong><span>Endpoints</span>`;
+    totalCatEl.innerHTML = `<i class="fas fa-th-large"></i><strong>${cat}</strong><span>Categories</span>`;
+
+    // footer links
+    const tgEl  = document.querySelector('.footer-links a[aria-label="Telegram"]');
+    const ghEl  = document.querySelector('.footer-links a[aria-label="GitHub"]');
+    const igEl  = document.querySelector('.footer-links a[aria-label="Instagram"]');
+    if (tgEl) tgEl.href = settings.whatsappLink  || '#';
+    if (ghEl) ghEl.href = settings.githubLink    || '#';
+    if (igEl) igEl.href = settings.instagramLink || '#';
+
+    renderTabs();
+    document.getElementById('searchInput').addEventListener('input', () => {
+      const active = document.querySelector('.tab.active');
+      renderApiCards(active ? active.textContent : 'All');
+    });
+  } catch (err) {
+    console.error(err);
+    totalEpEl.innerHTML  = `<i class="fas fa-bolt"></i><strong>0</strong><span>Endpoints</span>`;
+    totalCatEl.innerHTML = `<i class="fas fa-th-large"></i><strong>0</strong><span>Categories</span>`;
+    apiList.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i><p style="color:var(--danger)">Failed to load: ${err.message}<br><small>Ensure /set and /endpoints are accessible.</small></p></div>`;
+  } finally {
+    hideLoading();
+  }
+
+  // ─── Render tabs ───
+  function renderTabs() {
+    tabsContainer.innerHTML = '';
+    const categories = ['All', ...Object.keys(apis).filter(k => Array.isArray(apis[k]) && apis[k].length)];
+    if (categories.length <= 1) { renderApiCards('All'); return; }
+
+    categories.forEach((cat, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'tab' + (i === 0 ? ' active' : '');
+      btn.textContent = cat;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        renderApiCards(cat);
+      });
+      tabsContainer.appendChild(btn);
+    });
+    renderApiCards(categories[0]);
+  }
+
+  // ─── Render cards ───
+  function renderApiCards(category) {
+    apiList.innerHTML = '';
+    const base   = category === 'All' ? Object.values(apis).flat() : (apis[category] || []);
+    const term   = document.getElementById('searchInput').value.toLowerCase();
+    const items  = base.filter(a =>
+      (a.name || '').toLowerCase().includes(term) ||
+      (a.desc || '').toLowerCase().includes(term)
+    );
+    if (!items.length) {
+      apiList.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>No endpoints found.</p></div>';
+      return;
+    }
+    items.forEach((api, idx) => {
+      const card   = document.createElement('div');
+      card.className = 'api-card';
+      card.style.animationDelay = `${idx * 0.04}s`;
+      const method = determineMethod(api.path);
+      const params = extractParams(api.path);
+      card.innerHTML = `
+        <div class="card-top">
+          <span class="api-name">${api.name || 'Untitled'}</span>
+          <span class="method-badge method-${method.toLowerCase()}">${method}</span>
+        </div>
+        <p class="api-desc">${api.desc || 'No description.'}</p>
+        <button class="play-button"
+          data-endpoint="${api.path || ''}"
+          data-name="${api.name || ''}"
+          data-description="${api.desc || ''}"
+          data-method="${method}"
+          data-params='${JSON.stringify(params)}'>
+          Try It <i class="fas fa-arrow-right"></i>
+        </button>`;
+      apiList.appendChild(card);
+    });
+  }
+
+  // ─── Open modal ───
+  apiList.addEventListener('click', e => {
+    const btn = e.target.closest('.play-button');
+    if (!btn) return;
+
+    const { endpoint, name, description, method } = btn.dataset;
+    const params = JSON.parse(btn.dataset.params || '[]');
+    currentEndpoint = endpoint;
+
+    modalTitle.innerHTML = `<span class="method-badge method-${method.toLowerCase()}">${method}</span> ${name}`;
+    document.getElementById('desc').textContent = description;
+    document.getElementById('copyEndpointText').textContent = window.location.origin + (endpoint.split('?')[0]);
+
+    paramForm.innerHTML  = '';
+    responseEl.innerHTML = '';
+    responseEl.classList.add('d-none');
+    modalBody.classList.remove('hide-form-elements');
+
+    if (params.length) {
+      params.forEach(p => {
+        const lbl = document.createElement('label');
+        lbl.textContent = p.name + (p.required ? ' *' : '');
+        lbl.htmlFor     = `param-${p.name}`;
+        const inp = document.createElement('input');
+        inp.type        = 'text';
+        inp.id          = `param-${p.name}`;
+        inp.name        = p.name;
+        inp.placeholder = p.placeholder || `Enter ${p.name}`;
+        inp.required    = p.required !== false;
+        paramForm.appendChild(lbl);
+        paramForm.appendChild(inp);
+      });
+    } else {
+      paramForm.innerHTML = '<p>No parameters required.</p>';
+    }
+    modal.classList.add('active');
+  });
+
+  // ─── Close modal ───
+  const closeModal = () => {
+    modal.classList.remove('active');
+    setTimeout(() => {
+      paramForm.innerHTML = '';
+      responseEl.innerHTML = '';
+      responseEl.classList.add('d-none');
+      modalBody.classList.remove('hide-form-elements');
+    }, 300);
+  };
+  document.getElementById('btn-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+  // ─── Submit ───
+  submitBtn.addEventListener('click', async () => {
+    const formData = new FormData(paramForm);
+    for (const [k, v] of formData.entries()) {
+      const inp = paramForm.querySelector(`[name="${k}"]`);
+      if (inp && inp.required && !v) {
+        inp.style.borderColor = 'var(--danger)';
+        inp.focus();
+        return;
+      }
+    }
+
+    modalBody.classList.add('hide-form-elements');
+    loadingEl.style.display = 'block';
+    responseEl.classList.add('d-none');
+    responseEl.innerHTML = '';
+    responseEl.className = responseEl.className.replace(' error', '');
+
+    const qp = [];
+    for (const [k, v] of formData.entries()) {
+      if (v) qp.push(`${k}=${encodeURIComponent(v)}`);
+      const inp = paramForm.querySelector(`[name="${k}"]`);
+      if (inp) inp.style.borderColor = '';
+    }
+
+    const basePath = currentEndpoint.split('?')[0];
+    const url = window.location.origin + basePath + (qp.length ? '?' + qp.join('&') : '');
+    document.getElementById('copyEndpointText').textContent = url;
+
+    try {
+      const res = await fetch(url);
+      const ct  = res.headers.get('content-type') || '';
+      if (res.ok) {
+        if (ct.includes('application/json')) {
+          const data = await res.json();
+          responseEl.textContent = JSON.stringify(data, null, 2);
+        } else if (ct.includes('image')) {
+          const blob = await res.blob();
+          responseEl.innerHTML = `<img src="${URL.createObjectURL(blob)}" style="max-width:100%;border-radius:8px;display:block;margin:0 auto" alt="Response">`;
+        } else if (ct.includes('video')) {
+          const blob = await res.blob();
+          responseEl.innerHTML = `<video controls src="${URL.createObjectURL(blob)}" style="max-width:100%;border-radius:8px"></video>`;
+        } else if (ct.includes('audio')) {
+          const blob = await res.blob();
+          responseEl.innerHTML = `<audio controls src="${URL.createObjectURL(blob)}" style="width:100%"></audio>`;
+        } else {
+          responseEl.textContent = await res.text();
+        }
+      } else {
+        responseEl.textContent = `Error ${res.status}: ${res.statusText}\n${await res.text()}`;
+        responseEl.classList.add('error');
+      }
+    } catch (err) {
+      responseEl.textContent = `Fetch error: ${err.message}`;
+      responseEl.classList.add('error');
+    } finally {
+      loadingEl.style.display = 'none';
+      responseEl.classList.remove('d-none');
+    }
+  });
+
+  // ─── Copy button ───
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('copyEndpointText').textContent)
+      .then(() => {
+        const orig = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        copyBtn.style.color = 'var(--success)';
+        setTimeout(() => { copyBtn.innerHTML = orig; copyBtn.style.color = ''; }, 2000);
+      });
+  });
+});
+</script>
+</body>
+</html>
