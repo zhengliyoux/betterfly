@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://files.catbox.moe/0sk43i.jpg" alt="BetterFly Banner" width="100%" />
 </p>
-# BetterFly API
+# PhoenixVisions API
 
 
 > Simple REST API project for testing, development, and deployment experiments.
@@ -20,7 +20,7 @@
 
 ## 📖 About
 
-BetterFly adalah project REST API sederhana yang dibuat untuk:
+PhoenixVisions adalah project REST API sederhana yang dibuat untuk:
 
 - testing API
 - belajar backend
