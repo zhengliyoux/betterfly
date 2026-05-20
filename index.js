@@ -1,4 +1,4 @@
-cconst express = require('express');
+const express = require('express');
 const chalk = require('chalk');
 const fs = require('fs');
 const axios = require('axios');
@@ -396,4 +396,4 @@ app.listen(PORT, () => {
    EXPORT
 ================================= */
 
-module.exports const
+module.exports = app;
