@@ -1,4 +1,4 @@
-const express = require('express');
+cconst express = require('express');
 const chalk = require('chalk');
 const fs = require('fs');
 const axios = require('axios');
@@ -81,19 +81,38 @@ const serverStart = Date.now();
 
 const requestLogs = [];
 const endpointHistory = [];
-const liveLogs = []; // ✅ FIX: liveLogs was missing declaration
+const liveLogs = [];
 
 const ipRequests = {};
 const blockedIPs = {};
+const suspiciousIPs = {}; // track IP yang mencurigakan
 
-const RATE_LIMIT = 60;
-const BLOCK_DURATION = 10 * 60 * 1000;
+// ✅ Rate limit lebih wajar — dashboard sendiri ga kena block
+const RATE_LIMIT = 300;
+const BLOCK_DURATION = 60 * 60 * 1000; // 1 JAM
+
+// ✅ Bad user agents — block bot/scraper
+const BAD_AGENTS = [
+  'python-requests', 'curl', 'wget', 'scrapy',
+  'nikto', 'sqlmap', 'nmap', 'masscan',
+  'zgrab', 'go-http-client', 'libwww'
+];
 
 function formatRuntime(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ✅ Helper: tambah log ke live console
+function addLiveLog(type, message) {
+  liveLogs.unshift({
+    type,
+    time: new Date().toLocaleTimeString('id-ID'),
+    message
+  });
+  if (liveLogs.length > 100) liveLogs.pop();
 }
 
 /* ===============================
@@ -103,53 +122,75 @@ function formatRuntime(seconds) {
 app.use((req, res, next) => {
 
   const ip =
-    req.headers['x-forwarded-for']?.split(',')[0] ||
+    req.headers['x-forwarded-for']?.split(',')[0].trim() ||
     req.socket.remoteAddress ||
     req.ip ||
     'unknown';
 
+  const ua = req.headers['user-agent'] || '';
   const now = Date.now();
 
+  // ✅ BLOCK 1: Bad User Agent (bot/scraper)
+  const isBadAgent = BAD_AGENTS.some(b => ua.toLowerCase().includes(b));
+  if (isBadAgent) {
+    addLiveLog('blocked', `🚫 IP Blocked [Bad Agent]: ${ip} — UA: ${ua.slice(0, 40)}`);
+    console.log(chalk.bgRed.white(` BAD AGENT `), chalk.red(ip), chalk.yellow(ua.slice(0, 40)));
+    return res.status(403).json({
+      status: false,
+      code: 403,
+      message: 'Forbidden.'
+    });
+  }
+
+  // ✅ BLOCK 2: Cek IP yang sudah diblokir
   if (blockedIPs[ip]) {
     if (now < blockedIPs[ip]) {
+      const sisaMenit = Math.ceil((blockedIPs[ip] - now) / 60000);
+      addLiveLog('blocked', `🔒 IP Blocked [Still Blocked]: ${ip} — sisa ${sisaMenit} menit`);
       return res.status(429).json({
         status: false,
         code: 429,
-        message: 'IP blocked sementara karena spam request.'
+        message: `IP kamu diblokir. Coba lagi dalam ${sisaMenit} menit.`
       });
     } else {
+      // Unblock otomatis
+      addLiveLog('success', `✅ IP Unblocked: ${ip}`);
       delete blockedIPs[ip];
+      delete suspiciousIPs[ip];
     }
   }
 
+  // ✅ BLOCK 3: Rate Limit
   if (!ipRequests[ip]) ipRequests[ip] = [];
-
   ipRequests[ip] = ipRequests[ip].filter(t => now - t < 60000);
   ipRequests[ip].push(now);
 
-  if (ipRequests[ip].length > RATE_LIMIT) {
+  const reqCount = ipRequests[ip].length;
+
+  // Warning di 70% limit
+  if (reqCount > RATE_LIMIT * 0.7 && reqCount <= RATE_LIMIT) {
+    if (!suspiciousIPs[ip]) {
+      suspiciousIPs[ip] = true;
+      addLiveLog('warn', `⚠️ IP Suspicious: ${ip} — ${reqCount}/${RATE_LIMIT} req/menit`);
+    }
+  }
+
+  if (reqCount > RATE_LIMIT) {
     blockedIPs[ip] = now + BLOCK_DURATION;
-
-    // ✅ FIX: liveLogs.unshift moved inside middleware where req is accessible
-    liveLogs.unshift({
-      type: 'blocked',
-      time: new Date().toLocaleTimeString('id-ID'),
-      message: `${ip} blocked for spam requests`
-    });
-
+    addLiveLog('blocked', `🚫 IP Blocked [Rate Limit]: ${ip} — ${reqCount} req/menit — blocked 1 jam`);
     console.log(
       chalk.bgRed.white(` BLOCKED `),
       chalk.red(ip),
-      chalk.yellow(`spam detected`)
+      chalk.yellow(`${reqCount} req/menit — spam detected`)
     );
-
     return res.status(429).json({
       status: false,
       code: 429,
-      message: 'Terlalu banyak request.'
+      message: 'Terlalu banyak request. IP kamu diblokir 1 jam.'
     });
   }
 
+  // ✅ Log normal request
   global.totalreq += 1;
 
   const logData = {
@@ -165,14 +206,10 @@ app.use((req, res, next) => {
   endpointHistory.unshift(logData);
   if (endpointHistory.length > 200) endpointHistory.pop();
 
-  // ✅ FIX: liveLogs.unshift moved inside middleware where req is accessible
-  liveLogs.unshift({
-    type: 'request',
-    time: new Date().toLocaleTimeString('id-ID'),
-    message: `${ip} accessed ${req.path}`
-  });
-
-  if (liveLogs.length > 100) liveLogs.pop();
+  // Hanya log path API (bukan static file) ke live console
+  if (!req.path.match(/\.(js|css|png|jpg|ico|html|map)$/)) {
+    addLiveLog('request', `📡 ${req.method} ${req.path} — ${ip}`);
+  }
 
   console.log(
     chalk.hex('#00cec9')(`[ ${logData.time} ]`),
@@ -181,8 +218,8 @@ app.use((req, res, next) => {
     chalk.white(ip)
   );
 
+  // ✅ Auto inject creator ke semua response JSON
   const originalJson = res.json;
-
   res.json = function (data) {
     if (
       typeof data === 'object' &&
@@ -229,18 +266,25 @@ app.get('/runtime', (req, res) => {
 
 app.get('/security-stats', (req, res) => {
   const now = Date.now();
+
   const blocked = Object.entries(blockedIPs)
     .map(([ip, expire]) => ({
       ip,
-      sisaDetik: Math.max(0, Math.floor((expire - now) / 1000))
+      sisaDetik: Math.max(0, Math.floor((expire - now) / 1000)),
+      sisaMenit: Math.ceil(Math.max(0, (expire - now)) / 60000)
     }))
     .filter(v => v.sisaDetik > 0);
+
+  const suspicious = Object.keys(suspiciousIPs).filter(ip => !blockedIPs[ip]);
 
   res.json({
     status: true,
     totalBlockedNow: blocked.length,
+    totalSuspicious: suspicious.length,
     blockedIPs: blocked,
+    suspiciousIPs: suspicious,
     rateLimit: RATE_LIMIT,
+    blockDuration: '1 jam',
     logs: requestLogs.slice(0, 20)
   });
 });
@@ -249,7 +293,6 @@ app.get('/security-stats', (req, res) => {
    LIVE CONSOLE API
 ================================= */
 
-// ✅ FIX: Removed duplicate 'logs' key, fixed object syntax (missing comma before status)
 app.get('/live-logs', (req, res) => {
   res.json({
     status: true,
@@ -259,8 +302,6 @@ app.get('/live-logs', (req, res) => {
     history: endpointHistory
   });
 });
-
-// ✅ FIX: Removed fetchSecurityStats / fetchLiveLogs / setInterval — these are frontend functions, not backend
 
 /* ===============================
    ENDPOINT LOADER
@@ -287,7 +328,6 @@ fs.readdirSync(apiFolder).forEach(file => {
           app.get(cleanPath, run);
 
           if (!rawEndpoints[category]) rawEndpoints[category] = [];
-
           rawEndpoints[category].push({ name, desc, path: routePath });
           totalRoutes++;
 
@@ -344,10 +384,16 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(chalk.bgGreen.black(` 🚀 Server running on port ${PORT} `));
   console.log(chalk.bgCyan.black(` 📦 Total Routes Loaded: ${totalRoutes} `));
+  console.log(chalk.bgYellow.black(` 🛡️ Rate Limit: ${RATE_LIMIT} req/menit | Block: 1 jam `));
+
+  // Log startup ke live console
+  addLiveLog('success', `🚀 Server started on port ${PORT}`);
+  addLiveLog('success', `📦 ${totalRoutes} routes loaded`);
+  addLiveLog('success', `🛡️ Anti-DDoS aktif — limit ${RATE_LIMIT} req/menit`);
 });
 
 /* ===============================
    EXPORT
 ================================= */
 
-module.exports = app;
+module.exports const
