@@ -69,6 +69,40 @@ const settings = {
 };
 
 /* ===============================
+   TELEGRAM BOT NOTIFIER
+   Isi BOT_TOKEN dan CHAT_ID di file .env:
+   TG_TOKEN=xxxxxx:xxxxxxxxxxxxxxx
+   TG_CHAT_ID=123456789
+================================= */
+
+const TG_TOKEN = process.env.TG_TOKEN || '';
+const TG_CHAT_ID = process.env.TG_CHAT_ID || '';
+
+// Cooldown per event agar tidak spam notif Telegram
+const tgCooldown = {};
+
+async function sendTelegram(message, cooldownKey = null, cooldownMs = 60000) {
+  if (!TG_TOKEN || !TG_CHAT_ID) return; // Skip kalau belum dikonfigurasi
+
+  // Cek cooldown — hindari spam notif yang sama
+  if (cooldownKey) {
+    const last = tgCooldown[cooldownKey] || 0;
+    if (Date.now() - last < cooldownMs) return;
+    tgCooldown[cooldownKey] = Date.now();
+  }
+
+  try {
+    await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      chat_id: TG_CHAT_ID,
+      text: message,
+      parse_mode: 'Markdown'
+    });
+  } catch (err) {
+    // Gagal kirim Telegram, diam saja agar tidak ganggu server
+  }
+}
+
+/* ===============================
    SECURITY SYSTEM
 ================================= */
 
@@ -82,22 +116,15 @@ const ipRequests = {};
 const blockedIPs = {};
 const suspiciousIPs = {};
 
-// Rate limit berbeda: internal path lebih longgar, API lebih ketat
-const RATE_LIMIT_API = 300;        // req/menit untuk endpoint API
-const RATE_LIMIT_INTERNAL = 1200;  // req/menit untuk dashboard internal
+const RATE_LIMIT_API = 300;
+const RATE_LIMIT_INTERNAL = 1200;
 const BLOCK_DURATION = 60 * 60 * 1000; // 1 jam
 
-// Path dashboard internal — tetap kena rate limit tapi lebih longgar
 const INTERNAL_PATHS = [
-  '/runtime',
-  '/security-stats',
-  '/live-logs',
-  '/set',
-  '/endpoints',
-  '/'
+  '/runtime', '/security-stats', '/live-logs',
+  '/set', '/endpoints', '/'
 ];
 
-// Bad user agents — bot, scraper, scanner
 const BAD_AGENTS = [
   'python-requests', 'curl', 'wget', 'scrapy',
   'nikto', 'sqlmap', 'nmap', 'masscan',
@@ -106,7 +133,6 @@ const BAD_AGENTS = [
   'nuclei', 'gobuster', 'wfuzz'
 ];
 
-// Path berbahaya yang sering dicoba attacker
 const SUSPICIOUS_PATHS = [
   '/admin', '/wp-admin', '/phpmyadmin', '/.env',
   '/config', '/shell', '/backdoor', '/eval',
@@ -145,9 +171,13 @@ app.use((req, res, next) => {
   const now = Date.now();
   const isInternal = INTERNAL_PATHS.some(p => req.path === p || req.path.startsWith(p + '?'));
 
-  // ✅ BLOCK 1: No User-Agent sama sekali = bot/script
+  // ✅ BLOCK 1: Tidak ada User-Agent = bot/script mentah
   if (!ua && !isInternal) {
     addLiveLog('blocked', `🚫 Blocked [No UA]: ${ip}`);
+    sendTelegram(
+      `🚫 *Blocked — No User-Agent*\n\`IP: ${ip}\`\nPath: \`${req.path}\`\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `no-ua-${ip}`, 300000
+    );
     return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
@@ -156,16 +186,23 @@ app.use((req, res, next) => {
   if (isBadAgent) {
     addLiveLog('blocked', `🚫 Blocked [Bad Agent]: ${ip} — ${ua.slice(0, 40)}`);
     console.log(chalk.bgRed.white(` BAD AGENT `), chalk.red(ip));
+    sendTelegram(
+      `🤖 *Blocked — Bad User-Agent*\n\`IP: ${ip}\`\nUA: \`${ua.slice(0, 60)}\`\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `bad-agent-${ip}`, 300000
+    );
     return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
-  // ✅ BLOCK 3: Path scanning — attacker yang coba cari celah
+  // ✅ BLOCK 3: Path scanning
   const isSuspiciousPath = SUSPICIOUS_PATHS.some(p => req.path.toLowerCase().includes(p));
   if (isSuspiciousPath) {
-    // Langsung block IP yang nyoba path berbahaya
     blockedIPs[ip] = now + BLOCK_DURATION;
     addLiveLog('blocked', `🚫 Blocked [Path Scan]: ${ip} — tried ${req.path}`);
     console.log(chalk.bgRed.white(` PATH SCAN `), chalk.red(ip), chalk.yellow(req.path));
+    sendTelegram(
+      `🔍 *Blocked — Path Scanning*\n\`IP: ${ip}\`\nPath: \`${req.path}\`\nStatus: Diblokir 1 jam\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `scan-${ip}`, 300000
+    );
     return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
@@ -180,14 +217,13 @@ app.use((req, res, next) => {
         message: `IP kamu diblokir. Coba lagi dalam ${sisaMenit} menit.`
       });
     } else {
-      // Auto unblock
       addLiveLog('success', `✅ Auto Unblocked: ${ip}`);
       delete blockedIPs[ip];
       delete suspiciousIPs[ip];
     }
   }
 
-  // ✅ BLOCK 5: Rate Limit — berbeda untuk internal vs API
+  // ✅ BLOCK 5: Rate Limit
   const rateLimit = isInternal ? RATE_LIMIT_INTERNAL : RATE_LIMIT_API;
 
   if (!ipRequests[ip]) ipRequests[ip] = [];
@@ -201,16 +237,20 @@ app.use((req, res, next) => {
     if (!suspiciousIPs[ip]) {
       suspiciousIPs[ip] = true;
       addLiveLog('warn', `⚠️ Suspicious: ${ip} — ${reqCount}/${rateLimit} req/menit`);
+      sendTelegram(
+        `⚠️ *IP Suspicious*\n\`IP: ${ip}\`\nRequest: \`${reqCount}/${rateLimit} per menit\`\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+        `suspicious-${ip}`, 120000
+      );
     }
   }
 
   if (reqCount > rateLimit) {
     blockedIPs[ip] = now + BLOCK_DURATION;
     addLiveLog('blocked', `🚫 Blocked [Rate Limit]: ${ip} — ${reqCount} req/menit`);
-    console.log(
-      chalk.bgRed.white(` BLOCKED `),
-      chalk.red(ip),
-      chalk.yellow(`${reqCount} req/menit`)
+    console.log(chalk.bgRed.white(` BLOCKED `), chalk.red(ip), chalk.yellow(`${reqCount} req/menit`));
+    sendTelegram(
+      `🚫 *IP Diblokir — Rate Limit*\n\`IP: ${ip}\`\nRequest: \`${reqCount} per menit\`\nLimit: \`${rateLimit}/menit\`\nDurasi: *1 jam*\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `blocked-${ip}`, 300000
     );
     return res.status(429).json({
       status: false,
@@ -237,7 +277,6 @@ app.use((req, res, next) => {
     if (endpointHistory.length > 200) endpointHistory.pop();
   }
 
-  // Log ke live console hanya path non-static
   if (!req.path.match(/\.(js|css|png|jpg|ico|html|map)$/)) {
     addLiveLog('request', `📡 ${req.method} ${req.path} — ${ip}`);
   }
@@ -249,7 +288,6 @@ app.use((req, res, next) => {
     chalk.white(ip)
   );
 
-  // Auto inject creator ke response JSON
   const originalJson = res.json;
   res.json = function (data) {
     if (
@@ -445,15 +483,16 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(chalk.bgGreen.black(` 🚀 Server running on port ${PORT} `));
   console.log(chalk.bgCyan.black(` 📦 Total Routes Loaded: ${totalRoutes} `));
-  console.log(chalk.bgYellow.black(` 🛡️ Anti-DDoS: API ${RATE_LIMIT_API} req/menit | Internal ${RATE_LIMIT_INTERNAL} req/menit | Block: 1 jam `));
+  console.log(chalk.bgYellow.black(` 🛡️ Anti-DDoS: API ${RATE_LIMIT_API}/mnt | Internal ${RATE_LIMIT_INTERNAL}/mnt `));
 
   addLiveLog('success', `🚀 Server started on port ${PORT}`);
   addLiveLog('success', `📦 ${totalRoutes} routes loaded`);
   addLiveLog('success', `🛡️ Anti-DDoS aktif — API: ${RATE_LIMIT_API}/mnt | Dashboard: ${RATE_LIMIT_INTERNAL}/mnt`);
-});
 
-/* ===============================
-   EXPORT
-================================= */
+  // Notif Telegram saat server start
+  sendTelegram(
+    `🚀 *${settings.apiTitle} — Server Started*\n\nPort: \`${PORT}\`\nRoutes: \`${totalRoutes} endpoints\`\nAnti-DDoS: \`Aktif\`\nWaktu: ${new Date().toLocaleString('id-ID')}`
+  );
+});
 
 module.exports = app;
