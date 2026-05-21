@@ -29,10 +29,7 @@ global.getBuffer = async (url, options = {}) => {
     const res = await axios({
       method: 'get',
       url,
-      headers: {
-        'DNT': 1,
-        'Upgrade-Insecure-Request': 1
-      },
+      headers: { 'DNT': 1, 'Upgrade-Insecure-Request': 1 },
       ...options,
       responseType: 'arraybuffer'
     });
@@ -47,9 +44,7 @@ global.fetchJson = async (url, options = {}) => {
     const res = await axios({
       method: 'GET',
       url,
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0' },
       ...options
     });
     return res.data;
@@ -74,7 +69,7 @@ const settings = {
 };
 
 /* ===============================
-   LIVE SECURITY SYSTEM
+   SECURITY SYSTEM
 ================================= */
 
 const serverStart = Date.now();
@@ -87,29 +82,42 @@ const ipRequests = {};
 const blockedIPs = {};
 const suspiciousIPs = {};
 
-const RATE_LIMIT = 300;
-const BLOCK_DURATION = 60 * 60 * 1000; // 1 JAM
+// Rate limit berbeda: internal path lebih longgar, API lebih ketat
+const RATE_LIMIT_API = 300;        // req/menit untuk endpoint API
+const RATE_LIMIT_INTERNAL = 1200;  // req/menit untuk dashboard internal
+const BLOCK_DURATION = 60 * 60 * 1000; // 1 jam
 
-const BAD_AGENTS = [
-  'python-requests', 'curl', 'wget', 'scrapy',
-  'nikto', 'sqlmap', 'nmap', 'masscan',
-  'zgrab', 'go-http-client', 'libwww'
-];
-
-// ✅ Path internal yang DIKECUALIKAN dari rate limit & bad agent check
+// Path dashboard internal — tetap kena rate limit tapi lebih longgar
 const INTERNAL_PATHS = [
   '/runtime',
   '/security-stats',
   '/live-logs',
   '/set',
-  '/endpoints'
+  '/endpoints',
+  '/'
+];
+
+// Bad user agents — bot, scraper, scanner
+const BAD_AGENTS = [
+  'python-requests', 'curl', 'wget', 'scrapy',
+  'nikto', 'sqlmap', 'nmap', 'masscan',
+  'zgrab', 'go-http-client', 'libwww',
+  'dirbuster', 'hydra', 'metasploit',
+  'nuclei', 'gobuster', 'wfuzz'
+];
+
+// Path berbahaya yang sering dicoba attacker
+const SUSPICIOUS_PATHS = [
+  '/admin', '/wp-admin', '/phpmyadmin', '/.env',
+  '/config', '/shell', '/backdoor', '/eval',
+  '/../', '/etc/passwd', '/proc/', '/cmd'
 ];
 
 function formatRuntime(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
 function addLiveLog(type, message) {
@@ -122,7 +130,7 @@ function addLiveLog(type, message) {
 }
 
 /* ===============================
-   LOGGER + DDOS PROTECT
+   MIDDLEWARE ANTI-DDOS
 ================================= */
 
 app.use((req, res, next) => {
@@ -135,52 +143,53 @@ app.use((req, res, next) => {
 
   const ua = req.headers['user-agent'] || '';
   const now = Date.now();
+  const isInternal = INTERNAL_PATHS.some(p => req.path === p || req.path.startsWith(p + '?'));
 
-  // ✅ Skip semua pemeriksaan untuk internal paths (dashboard sendiri)
-  if (INTERNAL_PATHS.includes(req.path)) {
-    // Tetap log request tapi skip rate limit & bad agent
-    const logData = {
-      ip,
-      method: req.method,
-      path: req.path,
-      time: new Date().toLocaleString('id-ID')
-    };
-    requestLogs.unshift(logData);
-    if (requestLogs.length > 100) requestLogs.pop();
-    return next();
+  // ✅ BLOCK 1: No User-Agent sama sekali = bot/script
+  if (!ua && !isInternal) {
+    addLiveLog('blocked', `🚫 Blocked [No UA]: ${ip}`);
+    return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
-  // ✅ BLOCK 1: Bad User Agent (bot/scraper)
+  // ✅ BLOCK 2: Bad User Agent
   const isBadAgent = BAD_AGENTS.some(b => ua.toLowerCase().includes(b));
   if (isBadAgent) {
-    addLiveLog('blocked', `🚫 IP Blocked [Bad Agent]: ${ip} — UA: ${ua.slice(0, 40)}`);
-    console.log(chalk.bgRed.white(` BAD AGENT `), chalk.red(ip), chalk.yellow(ua.slice(0, 40)));
-    return res.status(403).json({
-      status: false,
-      code: 403,
-      message: 'Forbidden.'
-    });
+    addLiveLog('blocked', `🚫 Blocked [Bad Agent]: ${ip} — ${ua.slice(0, 40)}`);
+    console.log(chalk.bgRed.white(` BAD AGENT `), chalk.red(ip));
+    return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
-  // ✅ BLOCK 2: Cek IP yang sudah diblokir
+  // ✅ BLOCK 3: Path scanning — attacker yang coba cari celah
+  const isSuspiciousPath = SUSPICIOUS_PATHS.some(p => req.path.toLowerCase().includes(p));
+  if (isSuspiciousPath) {
+    // Langsung block IP yang nyoba path berbahaya
+    blockedIPs[ip] = now + BLOCK_DURATION;
+    addLiveLog('blocked', `🚫 Blocked [Path Scan]: ${ip} — tried ${req.path}`);
+    console.log(chalk.bgRed.white(` PATH SCAN `), chalk.red(ip), chalk.yellow(req.path));
+    return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
+  }
+
+  // ✅ BLOCK 4: Cek IP yang sudah diblokir
   if (blockedIPs[ip]) {
     if (now < blockedIPs[ip]) {
       const sisaMenit = Math.ceil((blockedIPs[ip] - now) / 60000);
-      addLiveLog('blocked', `🔒 IP Blocked [Still Blocked]: ${ip} — sisa ${sisaMenit} menit`);
+      addLiveLog('blocked', `🔒 Still Blocked: ${ip} — sisa ${sisaMenit} menit`);
       return res.status(429).json({
         status: false,
         code: 429,
         message: `IP kamu diblokir. Coba lagi dalam ${sisaMenit} menit.`
       });
     } else {
-      // Unblock otomatis
-      addLiveLog('success', `✅ IP Unblocked: ${ip}`);
+      // Auto unblock
+      addLiveLog('success', `✅ Auto Unblocked: ${ip}`);
       delete blockedIPs[ip];
       delete suspiciousIPs[ip];
     }
   }
 
-  // ✅ BLOCK 3: Rate Limit
+  // ✅ BLOCK 5: Rate Limit — berbeda untuk internal vs API
+  const rateLimit = isInternal ? RATE_LIMIT_INTERNAL : RATE_LIMIT_API;
+
   if (!ipRequests[ip]) ipRequests[ip] = [];
   ipRequests[ip] = ipRequests[ip].filter(t => now - t < 60000);
   ipRequests[ip].push(now);
@@ -188,20 +197,20 @@ app.use((req, res, next) => {
   const reqCount = ipRequests[ip].length;
 
   // Warning di 70% limit
-  if (reqCount > RATE_LIMIT * 0.7 && reqCount <= RATE_LIMIT) {
+  if (reqCount > rateLimit * 0.7 && reqCount <= rateLimit) {
     if (!suspiciousIPs[ip]) {
       suspiciousIPs[ip] = true;
-      addLiveLog('warn', `⚠️ IP Suspicious: ${ip} — ${reqCount}/${RATE_LIMIT} req/menit`);
+      addLiveLog('warn', `⚠️ Suspicious: ${ip} — ${reqCount}/${rateLimit} req/menit`);
     }
   }
 
-  if (reqCount > RATE_LIMIT) {
+  if (reqCount > rateLimit) {
     blockedIPs[ip] = now + BLOCK_DURATION;
-    addLiveLog('blocked', `🚫 IP Blocked [Rate Limit]: ${ip} — ${reqCount} req/menit — blocked 1 jam`);
+    addLiveLog('blocked', `🚫 Blocked [Rate Limit]: ${ip} — ${reqCount} req/menit`);
     console.log(
       chalk.bgRed.white(` BLOCKED `),
       chalk.red(ip),
-      chalk.yellow(`${reqCount} req/menit — spam detected`)
+      chalk.yellow(`${reqCount} req/menit`)
     );
     return res.status(429).json({
       status: false,
@@ -210,7 +219,7 @@ app.use((req, res, next) => {
     });
   }
 
-  // ✅ Log normal request
+  // ✅ Log request normal
   global.totalreq += 1;
 
   const logData = {
@@ -223,10 +232,12 @@ app.use((req, res, next) => {
   requestLogs.unshift(logData);
   if (requestLogs.length > 100) requestLogs.pop();
 
-  endpointHistory.unshift(logData);
-  if (endpointHistory.length > 200) endpointHistory.pop();
+  if (!isInternal) {
+    endpointHistory.unshift(logData);
+    if (endpointHistory.length > 200) endpointHistory.pop();
+  }
 
-  // Hanya log path API (bukan static file) ke live console
+  // Log ke live console hanya path non-static
   if (!req.path.match(/\.(js|css|png|jpg|ico|html|map)$/)) {
     addLiveLog('request', `📡 ${req.method} ${req.path} — ${ip}`);
   }
@@ -238,7 +249,7 @@ app.use((req, res, next) => {
     chalk.white(ip)
   );
 
-  // ✅ Auto inject creator ke semua response JSON (dengan guard aman)
+  // Auto inject creator ke response JSON
   const originalJson = res.json;
   res.json = function (data) {
     if (
@@ -268,16 +279,12 @@ app.get('/set', (req, res) => {
 });
 
 /* ===============================
-   RUNTIME API — Fix: include memory & CPU
+   RUNTIME API
 ================================= */
 
 app.get('/runtime', (req, res) => {
   const uptimeSeconds = Math.floor((Date.now() - serverStart) / 1000);
-
-  // Memory dari Node.js process
   const mem = process.memoryUsage();
-
-  // CPU info dari OS
   const cpus = os.cpus();
   const loadAvg = os.loadavg();
   const cpuPct = Math.min(100, Math.round((loadAvg[0] / (cpus.length || 1)) * 100));
@@ -302,7 +309,7 @@ app.get('/runtime', (req, res) => {
 });
 
 /* ===============================
-   SECURITY API
+   SECURITY STATS API
 ================================= */
 
 app.get('/security-stats', (req, res) => {
@@ -324,14 +331,14 @@ app.get('/security-stats', (req, res) => {
     totalSuspicious: suspicious.length,
     blockedIPs: blocked,
     suspiciousIPs: suspicious,
-    rateLimit: RATE_LIMIT,
+    rateLimit: RATE_LIMIT_API,
     blockDuration: '1 jam',
     logs: requestLogs.slice(0, 20)
   });
 });
 
 /* ===============================
-   LIVE CONSOLE API
+   LIVE LOGS API
 ================================= */
 
 app.get('/live-logs', (req, res) => {
@@ -419,17 +426,30 @@ app.get('/', (req, res) => {
 });
 
 /* ===============================
+   404 HANDLER
+================================= */
+
+app.use((req, res) => {
+  addLiveLog('warn', `⚠️ 404: ${req.method} ${req.path}`);
+  res.status(404).json({
+    status: false,
+    code: 404,
+    message: 'Endpoint tidak ditemukan.'
+  });
+});
+
+/* ===============================
    START SERVER
 ================================= */
 
 app.listen(PORT, () => {
   console.log(chalk.bgGreen.black(` 🚀 Server running on port ${PORT} `));
   console.log(chalk.bgCyan.black(` 📦 Total Routes Loaded: ${totalRoutes} `));
-  console.log(chalk.bgYellow.black(` 🛡️ Rate Limit: ${RATE_LIMIT} req/menit | Block: 1 jam `));
+  console.log(chalk.bgYellow.black(` 🛡️ Anti-DDoS: API ${RATE_LIMIT_API} req/menit | Internal ${RATE_LIMIT_INTERNAL} req/menit | Block: 1 jam `));
 
   addLiveLog('success', `🚀 Server started on port ${PORT}`);
   addLiveLog('success', `📦 ${totalRoutes} routes loaded`);
-  addLiveLog('success', `🛡️ Anti-DDoS aktif — limit ${RATE_LIMIT} req/menit`);
+  addLiveLog('success', `🛡️ Anti-DDoS aktif — API: ${RATE_LIMIT_API}/mnt | Dashboard: ${RATE_LIMIT_INTERNAL}/mnt`);
 });
 
 /* ===============================
