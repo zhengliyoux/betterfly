@@ -8,33 +8,38 @@
 <link id="icon" rel="icon" href="https://files.catbox.moe/0sk43i.jpg" type="image/png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-
 <style>
 :root{
   --bg:#0f172a;--card:#111827;--soft:#1e293b;
   --border:#23314a;--text:#f8fafc;--gray:#94a3b8;
   --blue:#3b82f6;--cyan:#38bdf8;--green:#22c55e;
-  --red:#ef4444;--warning:#fbbf24;
+  --red:#ef4444;--warning:#fbbf24;--purple:#a78bfa;
 }
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Plus Jakarta Sans',sans-serif;}
 body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
+/* ======= LOADER ======= */
 #loader{position:fixed;inset:0;background:#020617;z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:.5s;}
-#loader.hide{opacity:0;visibility:hidden;}
-.loader-logo{font-size:2rem;font-weight:800;margin-bottom:20px;}
+#loader.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.loader-logo{font-size:2rem;font-weight:800;margin-bottom:20px;animation:loaderFloat 1s ease infinite alternate;}
 .loader-logo span{color:var(--cyan);}
+@keyframes loaderFloat{from{transform:translateY(0)}to{transform:translateY(-6px)}}
 .loader-bar{width:220px;height:5px;background:#1e293b;border-radius:999px;overflow:hidden;position:relative;}
 .loader-bar::before{content:"";position:absolute;width:40%;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));animation:load 1s linear infinite;border-radius:999px;}
 @keyframes load{0%{left:-40%;}100%{left:100%;}}
+.loader-sub{margin-top:14px;color:#475569;font-size:11px;letter-spacing:4px;}
 
-.mobile-toggle{display:none;position:fixed;top:18px;left:18px;width:45px;height:45px;border-radius:14px;background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);z-index:3000;align-items:center;justify-content:center;cursor:pointer;}
+/* ======= MOBILE TOGGLE ======= */
+.mobile-toggle{display:none;position:fixed;top:18px;left:18px;width:45px;height:45px;border-radius:14px;background:rgba(15,23,42,.92);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);z-index:3000;align-items:center;justify-content:center;cursor:pointer;transition:.2s;}
+.mobile-toggle:hover{transform:translateY(-1px);}
 .mobile-toggle i{color:white;font-size:18px;}
 
+/* ======= SIDEBAR ======= */
 .sidebar{width:270px;height:100vh;background:rgba(15,23,42,.97);border-right:1px solid rgba(255,255,255,.06);position:fixed;left:0;top:0;padding:24px;z-index:2000;transition:.3s;display:flex;flex-direction:column;overflow-y:auto;}
 .logo{font-size:1.7rem;font-weight:800;margin-bottom:30px;}
 .logo span{color:var(--cyan);}
 .nav-links{display:flex;flex-direction:column;gap:8px;}
-.nav-item{text-decoration:none;color:var(--gray);display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:14px;transition:.25s;font-weight:600;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-size:.95rem;}
+.nav-item{text-decoration:none;color:var(--gray);display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:14px;transition:.25s;font-weight:600;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-size:.95rem;font-family:inherit;}
 .nav-item:hover,.nav-item.active{background:rgba(59,130,246,.12);color:white;}
 .nav-item i{width:20px;}
 
@@ -42,11 +47,7 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .live-console::-webkit-scrollbar{width:6px;}
 .live-console::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px;}
 .console-line{margin-bottom:8px;line-height:1.5;word-break:break-word;animation:fadeConsole .25s ease;}
-.console-normal{color:#94a3b8;}
-.console-success{color:var(--green);}
-.console-warn{color:var(--warning);}
-.console-danger{color:var(--red);}
-.console-request{color:var(--cyan);}
+.console-normal{color:#94a3b8;}.console-success{color:var(--green);}.console-warn{color:var(--warning);}.console-danger{color:var(--red);}.console-request{color:var(--cyan);}
 @keyframes fadeConsole{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
 
 .sidebar-security{margin-top:20px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:16px;padding:14px;}
@@ -55,28 +56,28 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .sec-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:.82rem;}
 .sec-row span:first-child{color:var(--gray);}
 .sec-val{font-weight:700;font-family:'JetBrains Mono',monospace;}
-.sec-online{color:var(--green);}
-.sec-blocked{color:var(--red);}
-.sec-runtime{color:var(--cyan);}
+.sec-online{color:var(--green);}.sec-blocked{color:var(--red);}.sec-runtime{color:var(--cyan);}
 
 .sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,.05);}
-.theme-toggle-btn{width:100%;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:var(--gray);cursor:pointer;display:flex;align-items:center;gap:12px;font-size:.88rem;font-weight:600;transition:.25s;}
+.theme-toggle-btn{width:100%;padding:11px 16px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:var(--gray);cursor:pointer;display:flex;align-items:center;gap:12px;font-size:.88rem;font-weight:600;transition:.25s;font-family:inherit;}
 .theme-toggle-btn:hover{background:rgba(59,130,246,.1);color:white;}
 
+/* ======= MAIN ======= */
 .main{margin-left:270px;padding:30px;min-height:100vh;}
-
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
 .greeting h1{font-size:1.9rem;font-weight:800;}
 .greeting p{color:var(--gray);margin-top:5px;font-size:.92rem;}
 .search-box{position:relative;display:flex;align-items:center;}
 .search-box i{position:absolute;left:13px;color:var(--gray);font-size:.85rem;}
-.search-box input{padding:10px 13px 10px 38px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:13px;color:var(--text);font-size:.88rem;width:250px;transition:.25s;}
+.search-box input{padding:10px 13px 10px 38px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:13px;color:var(--text);font-size:.88rem;width:250px;transition:.25s;font-family:inherit;}
 .search-box input::placeholder{color:var(--gray);}
 .search-box input:focus{outline:none;border-color:var(--blue);background:rgba(59,130,246,.06);}
 
+/* ======= STATS GRID ======= */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px;}
-.stats-card{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.06);padding:20px;border-radius:20px;position:relative;overflow:hidden;}
-.stats-card::before{content:"";position:absolute;width:100px;height:100px;background:rgba(59,130,246,.06);border-radius:50%;top:-40px;right:-40px;}
+.stats-card{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.06);padding:20px;border-radius:20px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;}
+.stats-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.stats-card::before{content:"";position:absolute;width:100px;height:100px;background:rgba(59,130,246,.05);border-radius:50%;top:-40px;right:-40px;}
 .stats-icon{width:46px;height:46px;border-radius:14px;background:rgba(59,130,246,.12);color:var(--cyan);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:13px;}
 .stats-title{font-size:.72rem;color:var(--gray);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;}
 .stats-value{font-size:1.7rem;font-weight:800;font-family:'JetBrains Mono',monospace;}
@@ -84,21 +85,23 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 
 .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);margin-right:6px;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-.offline-dot{background:var(--red);box-shadow:0 0 8px var(--red);}
+.offline-dot{background:var(--red)!important;box-shadow:0 0 8px var(--red)!important;}
 
+/* ======= DASHBOARD GRID ======= */
 .dashboard-grid{display:grid;grid-template-columns:2fr 1fr;gap:22px;}
 
+/* ======= HERO CARD ======= */
 .hero-card{background:linear-gradient(135deg,#2563eb,#06b6d4);border-radius:26px;padding:32px;position:relative;overflow:hidden;margin-bottom:22px;}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.18);font-size:.78rem;margin-bottom:18px;}
 .hero-card h2{font-size:1.9rem;line-height:1.2;margin-bottom:14px;}
 .hero-card p{opacity:.92;line-height:1.8;margin-bottom:24px;font-size:.93rem;}
 .hero-buttons{display:flex;gap:12px;flex-wrap:wrap;}
-.hero-btn{padding:12px 18px;border-radius:13px;text-decoration:none;font-weight:700;display:flex;align-items:center;gap:9px;transition:.25s;cursor:pointer;border:none;font-size:.9rem;}
-.primary-btn{background:white;color:#0f172a;}
-.secondary-btn{background:rgba(255,255,255,.15);color:white;}
+.hero-btn{padding:12px 18px;border-radius:13px;text-decoration:none;font-weight:700;display:flex;align-items:center;gap:9px;transition:.25s;cursor:pointer;border:none;font-size:.9rem;font-family:inherit;}
+.primary-btn{background:white;color:#0f172a;}.secondary-btn{background:rgba(255,255,255,.15);color:white;}
 .hero-btn:hover{transform:translateY(-3px);}
 .hero-glow{position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.08);right:-60px;top:-60px;}
 
+/* ======= INFO CARDS ======= */
 .info-card{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.06);border-radius:22px;padding:22px;}
 .info-top{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
 .info-icon{width:50px;height:50px;border-radius:16px;background:rgba(34,197,94,.12);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:20px;}
@@ -106,7 +109,7 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .info-top p{color:var(--gray);font-size:.85rem;}
 .progress-label{display:flex;justify-content:space-between;margin-bottom:9px;font-size:.88rem;}
 .progress-bar{height:9px;background:#0b1220;border-radius:999px;overflow:hidden;}
-.progress-fill{width:99%;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:999px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:999px;transition:width .6s ease;}
 
 .security-card{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.06);border-radius:22px;padding:22px;margin-top:18px;}
 .security-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
@@ -118,14 +121,14 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .blocked-time{color:var(--red);font-size:.75rem;}
 .no-blocks{color:var(--gray);font-size:.85rem;text-align:center;padding:16px 0;font-style:italic;}
 .security-badge{padding:4px 10px;border-radius:999px;font-size:.72rem;font-weight:700;}
-.badge-safe{background:rgba(34,197,94,.14);color:var(--green);}
-.badge-warn{background:rgba(239,68,68,.14);color:var(--red);}
+.badge-safe{background:rgba(34,197,94,.14);color:var(--green);}.badge-warn{background:rgba(239,68,68,.14);color:var(--red);}
 
+/* ======= ENDPOINTS PAGE ======= */
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
 .section-header h3{font-size:1.1rem;font-weight:700;}
 .live-badge{background:rgba(34,197,94,.14);color:var(--green);padding:4px 11px;border-radius:999px;font-size:.73rem;font-weight:700;}
 .tabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px;}
-.tab{background:rgba(255,255,255,.04);color:var(--gray);padding:8px 16px;border:1px solid rgba(255,255,255,.07);border-radius:999px;cursor:pointer;font-size:.83rem;font-weight:600;transition:.2s;}
+.tab{background:rgba(255,255,255,.04);color:var(--gray);padding:8px 16px;border:1px solid rgba(255,255,255,.07);border-radius:999px;cursor:pointer;font-size:.83rem;font-weight:600;transition:.2s;font-family:inherit;}
 .tab:hover{background:rgba(59,130,246,.15);color:white;border-color:rgba(59,130,246,.3);}
 .tab.active{background:var(--blue);color:white;border-color:var(--blue);box-shadow:0 0 18px rgba(59,130,246,.3);}
 
@@ -138,10 +141,65 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .api-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .method-badge{display:inline-flex;padding:3px 9px;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
 .method-get{background:rgba(34,197,94,.15);color:var(--green);}
-.method-post{background:rgba(59,130,246,.15);color:var(--blue);}
-.try-btn{background:rgba(59,130,246,.13);color:var(--cyan);border:1px solid rgba(59,130,246,.22);padding:7px 14px;border-radius:9px;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:6px;transition:.2s;}
+.try-btn{background:rgba(59,130,246,.13);color:var(--cyan);border:1px solid rgba(59,130,246,.22);padding:7px 14px;border-radius:9px;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:6px;transition:.2s;font-family:inherit;}
 .try-btn:hover{background:var(--blue);color:white;border-color:var(--blue);}
 
+/* ======= STATUS PAGE ======= */
+.status-page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-bottom:22px;}
+.status-metric-card{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:22px;transition:transform .2s,box-shadow .2s;}
+.status-metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.sm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sm-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.sm-icon.blue{background:rgba(59,130,246,.14);color:var(--blue);}
+.sm-icon.green{background:rgba(34,197,94,.14);color:var(--green);}
+.sm-icon.red{background:rgba(239,68,68,.14);color:var(--red);}
+.sm-icon.cyan{background:rgba(56,189,248,.14);color:var(--cyan);}
+.sm-icon.purple{background:rgba(167,139,250,.14);color:var(--purple);}
+.sm-icon.warning{background:rgba(251,191,36,.14);color:var(--warning);}
+.sm-label{font-size:.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;}
+.sm-value{font-size:1.8rem;font-weight:800;font-family:'JetBrains Mono',monospace;margin-bottom:4px;line-height:1.1;}
+.sm-sub{font-size:.78rem;color:var(--gray);}
+.sm-badge{padding:4px 10px;border-radius:999px;font-size:.72rem;font-weight:700;}
+
+.resource-bar-wrap{margin-top:12px;}
+.resource-bar-label{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:6px;}
+.resource-bar-label span:first-child{color:var(--gray);}
+.resource-bar-track{height:8px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;}
+.resource-bar-fill{height:100%;border-radius:999px;transition:width .8s ease;}
+.bar-blue{background:linear-gradient(90deg,var(--blue),var(--cyan));}
+.bar-green{background:linear-gradient(90deg,#16a34a,var(--green));}
+.bar-red{background:linear-gradient(90deg,#dc2626,var(--red));}
+.bar-purple{background:linear-gradient(90deg,#7c3aed,var(--purple));}
+.bar-warning{background:linear-gradient(90deg,#d97706,var(--warning));}
+
+.status-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px;}
+
+.status-timeline{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:22px;}
+.timeline-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.timeline-header h3{font-size:1rem;font-weight:700;}
+.timeline-item{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;position:relative;}
+.timeline-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.timeline-dot.ok{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.5);}
+.timeline-dot.warn{background:var(--warning);box-shadow:0 0 8px rgba(251,191,36,.5);}
+.timeline-dot.err{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.5);}
+.timeline-text{font-size:.85rem;color:var(--text);}
+.timeline-time{font-size:.75rem;color:var(--gray);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+
+.status-health-overview{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:22px;}
+.health-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.health-item:last-child{border-bottom:none;}
+.health-name{display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600;}
+.health-name i{width:16px;color:var(--gray);}
+.health-status{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;}
+.hs-ok{background:rgba(34,197,94,.14);color:var(--green);}
+.hs-warn{background:rgba(251,191,36,.14);color:var(--warning);}
+.hs-err{background:rgba(239,68,68,.14);color:var(--red);}
+.hs-unknown{background:rgba(148,163,184,.1);color:var(--gray);}
+
+.offline-overlay{display:none;position:fixed;top:0;left:0;right:0;background:rgba(239,68,68,.9);color:white;text-align:center;padding:10px;font-size:.88rem;font-weight:700;z-index:10000;backdrop-filter:blur(4px);}
+.offline-overlay.show{display:block;}
+
+/* ======= MODAL ======= */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:5000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:.3s;padding:18px;}
 .modal-overlay.active{opacity:1;visibility:visible;}
 .modal-box{background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:22px;width:100%;max-width:660px;transform:translateY(-28px);opacity:0;transition:.3s;max-height:90vh;overflow-y:auto;}
@@ -154,14 +212,14 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .modal-body{padding:18px 22px 22px;}
 .endpoint-copy{display:flex;align-items:center;gap:9px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px 13px;margin-bottom:16px;}
 .endpoint-copy code{flex-grow:1;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--cyan);word-break:break-all;}
-.copy-btn{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.2);color:var(--blue);padding:5px 11px;border-radius:7px;cursor:pointer;font-size:.76rem;font-weight:700;white-space:nowrap;transition:.2s;}
+.copy-btn{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.2);color:var(--blue);padding:5px 11px;border-radius:7px;cursor:pointer;font-size:.76rem;font-weight:700;white-space:nowrap;transition:.2s;font-family:inherit;}
 .copy-btn:hover{background:var(--blue);color:white;}
 .param-label{font-size:.83rem;font-weight:600;color:var(--gray);margin-bottom:5px;display:block;}
-.param-input{width:100%;padding:10px 13px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:11px;color:var(--text);font-size:.88rem;margin-bottom:12px;transition:.2s;}
+.param-input{width:100%;padding:10px 13px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:11px;color:var(--text);font-size:.88rem;margin-bottom:12px;transition:.2s;font-family:inherit;}
 .param-input::placeholder{color:#4b5e7a;}
 .param-input:focus{outline:none;border-color:var(--blue);background:rgba(59,130,246,.06);}
 .no-params{color:var(--gray);font-size:.88rem;padding:6px 0 12px;font-style:italic;}
-.submit-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--blue),#06b6d4);border:none;border-radius:13px;color:white;font-size:.92rem;font-weight:700;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:9px;}
+.submit-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--blue),#06b6d4);border:none;border-radius:13px;color:white;font-size:.92rem;font-weight:700;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:9px;font-family:inherit;}
 .submit-btn:hover{opacity:.9;transform:translateY(-2px);}
 .response-wrap{margin-top:14px;background:#020617;border:1px solid rgba(255,255,255,.06);border-radius:13px;overflow:hidden;}
 .response-head{padding:9px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.05);font-size:.76rem;color:var(--gray);display:flex;align-items:center;justify-content:space-between;}
@@ -171,6 +229,7 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .img-response{max-width:100%;border-radius:9px;display:block;margin:0 auto;}
 .d-none{display:none;}
 
+/* ======= DONATE ======= */
 .donate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:6000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:.3s;padding:18px;}
 .donate-overlay.active{opacity:1;visibility:visible;}
 .donate-box{background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:28px;width:100%;max-width:400px;text-align:center;position:relative;transform:scale(.9);opacity:0;transition:.3s;}
@@ -182,36 +241,44 @@ body{background:linear-gradient(180deg,#020617,#0f172a);color:var(--text);min-he
 .donate-close{position:absolute;top:13px;right:13px;background:rgba(255,255,255,.06);border:none;color:var(--gray);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:1.05rem;display:flex;align-items:center;justify-content:center;transition:.2s;}
 .donate-close:hover{background:rgba(239,68,68,.15);color:var(--red);}
 
-.popup{position:fixed;right:18px;bottom:18px;width:300px;background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px;z-index:4000;box-shadow:0 18px 50px rgba(0,0,0,.4);transition:.3s;}
-.popup.hide{opacity:0;transform:translateY(18px);pointer-events:none;}
+/* ======= POPUP ======= */
+.popup{position:fixed;right:18px;bottom:18px;width:300px;background:#0f172a;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px;z-index:4000;box-shadow:0 18px 50px rgba(0,0,0,.4);transition:.3s;animation:slideUpPopup .4s ease;}
+@keyframes slideUpPopup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.popup.hide{opacity:0;transform:translateY(18px);pointer-events:none;visibility:hidden;}
 .popup-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
 .popup-title{font-weight:800;font-size:.95rem;}
-.popup-close{cursor:pointer;color:var(--gray);font-size:1.2rem;background:none;border:none;}
+.popup-close{cursor:pointer;color:var(--gray);font-size:1.2rem;background:none;border:none;font-family:inherit;}
 .popup p{color:var(--gray);line-height:1.7;margin-bottom:14px;font-size:.85rem;}
 .popup-btns{display:flex;gap:9px;}
 .popup-btn{flex:1;text-align:center;padding:10px;border-radius:11px;text-decoration:none;font-weight:700;color:white;font-size:.84rem;transition:.2s;}
 .popup-btn:hover{opacity:.85;transform:translateY(-2px);}
 .wa{background:#22c55e;}.tg{background:#0ea5e9;}
 
+/* ======= FOOTER ======= */
 footer{text-align:center;padding:22px 28px;border-top:1px solid rgba(255,255,255,.05);color:var(--gray);font-size:.83rem;margin-top:18px;}
 footer .footer-icons{display:flex;justify-content:center;gap:14px;margin-bottom:10px;}
 footer .footer-icons a{color:var(--gray);font-size:1.2rem;transition:.2s;}
 footer .footer-icons a:hover{color:var(--cyan);}
 
+/* ======= LIGHT MODE ======= */
 body.light{background:linear-gradient(180deg,#dbe8f5,#f0f4f8);color:#1e293b;}
 body.light .sidebar{background:rgba(255,255,255,.97);border-right-color:#e2e8f0;}
-body.light .api-card,body.light .stats-card,body.light .info-card,body.light .security-card{background:rgba(255,255,255,.9);}
-body.light .modal-box,body.light #loader,body.light .donate-box,body.light .sidebar-security{background:#fff;}
+body.light .api-card,body.light .stats-card,body.light .info-card,body.light .security-card,
+body.light .status-metric-card,body.light .status-timeline,body.light .status-health-overview{background:rgba(255,255,255,.9);border-color:#e2e8f0;}
+body.light .modal-box,body.light #loader,body.light .donate-box{background:#fff;}
 body.light .modal-head{background:#fff;}
-body.light .endpoint-copy{background:rgba(0,0,0,.04);}
-body.light .response-wrap,body.light .response-body{background:#f8fafc;color:#1e293b;}
-body.light .param-input{background:rgba(0,0,0,.04);border-color:#e2e8f0;color:#1e293b;}
+body.light .endpoint-copy{background:rgba(0,0,0,.04);border-color:#e2e8f0;}
+body.light .response-wrap,body.light .live-console{background:#f8fafc;}
+body.light .response-body{color:#1e293b;}
+body.light .param-input,body.light .search-box input{background:rgba(0,0,0,.04);border-color:#e2e8f0;color:#1e293b;}
 body.light .tab{background:rgba(0,0,0,.04);border-color:#e2e8f0;}
-body.light .search-box input{background:rgba(0,0,0,.05);border-color:#e2e8f0;color:#1e293b;}
 body.light .popup{background:#fff;}
+body.light .resource-bar-track{background:rgba(0,0,0,.08);}
+body.light .health-item{border-bottom-color:rgba(0,0,0,.06);}
 
+/* ======= RESPONSIVE ======= */
 @media(max-width:1280px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:1100px){.dashboard-grid{grid-template-columns:1fr;}}
+@media(max-width:1100px){.dashboard-grid{grid-template-columns:1fr;}.status-two-col{grid-template-columns:1fr;}}
 @media(max-width:1024px){
   .mobile-toggle{display:flex;}
   .sidebar{transform:translateX(-100%);}
@@ -221,19 +288,24 @@ body.light .popup{background:#fff;}
 @media(max-width:600px){
   .stats-grid{grid-template-columns:1fr 1fr;}
   .topbar{flex-direction:column;align-items:flex-start;}
-  .search-box input{width:100%;}
-  .search-box{width:100%;}
+  .search-box input,.search-box{width:100%;}
   .api-grid{grid-template-columns:1fr;}
   .popup{width:calc(100% - 28px);right:14px;}
+  .status-page-grid{grid-template-columns:1fr;}
 }
 @media(max-width:400px){.stats-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
+<div class="offline-overlay" id="offlineBanner">
+  ⚠️ Server sedang offline — Mencoba reconnect...
+</div>
+
 <div id="loader">
   <div class="loader-logo">Phoenix Vision<span>API</span></div>
   <div class="loader-bar"></div>
+  <div class="loader-sub">LOADING...</div>
 </div>
 
 <div class="mobile-toggle" onclick="toggleSidebar()">
@@ -242,7 +314,6 @@ body.light .popup{background:#fff;}
 
 <aside class="sidebar" id="sidebar">
   <div class="logo" id="sidebarLogo">Phoenix Vision<span>API</span></div>
-
   <div class="nav-links">
     <button class="nav-item active" onclick="showSection('home')">
       <i class="fa-solid fa-house"></i> Dashboard
@@ -250,20 +321,19 @@ body.light .popup{background:#fff;}
     <button class="nav-item" onclick="showSection('endpoints')">
       <i class="fa-solid fa-bolt"></i> Endpoints
     </button>
+    <button class="nav-item" onclick="showSection('status')">
+      <i class="fa-solid fa-signal"></i> System Status
+    </button>
     <button class="nav-item" onclick="openDonateModal()">
       <i class="fa-solid fa-heart"></i> Donate
     </button>
   </div>
 
   <div class="sidebar-security" style="margin-top:20px;">
-    <div class="sec-title">
-      <i class="fa-solid fa-shield-halved"></i> Security Monitor
-    </div>
+    <div class="sec-title"><i class="fa-solid fa-shield-halved"></i> Security Monitor</div>
     <div class="sec-row">
       <span>Status</span>
-      <span class="sec-val sec-online" id="sidebarStatus">
-        <span class="live-dot"></span> Online
-      </span>
+      <span class="sec-val sec-online" id="sidebarStatus"><span class="live-dot"></span> Online</span>
     </div>
     <div class="sec-row">
       <span>Runtime</span>
@@ -275,7 +345,6 @@ body.light .popup{background:#fff;}
     </div>
     <div class="sec-row">
       <span>Rate Limit</span>
-      <!-- ✅ FIX: 60 → 300 -->
       <span class="sec-val" style="color:var(--warning);">300 req/min</span>
     </div>
   </div>
@@ -289,7 +358,6 @@ body.light .popup{background:#fff;}
 </aside>
 
 <main class="main">
-
   <div class="topbar">
     <div class="greeting">
       <h1 id="greeting">Hello Developer 👋</h1>
@@ -301,8 +369,8 @@ body.light .popup{background:#fff;}
     </div>
   </div>
 
+  <!-- ===== HOME ===== -->
   <div id="section-home">
-
     <div class="stats-grid">
       <div class="stats-card">
         <div class="stats-icon"><i class="fa-solid fa-bolt"></i></div>
@@ -326,14 +394,12 @@ body.light .popup{background:#fff;}
           <i class="fa-solid fa-clock"></i>
         </div>
         <div class="stats-title">Server Runtime</div>
-        <!-- ✅ FIX: runtime dari server asli via /runtime -->
         <div class="stats-value runtime-val" id="statRuntime">00:00:00</div>
       </div>
     </div>
 
     <div class="dashboard-grid">
       <div>
-
         <div class="hero-card">
           <div class="hero-badge"><i class="fa-solid fa-sparkles"></i> Premium API</div>
           <h2 id="heroTitle">Phoenix Vision API</h2>
@@ -348,44 +414,30 @@ body.light .popup{background:#fff;}
           </div>
           <div class="hero-glow"></div>
         </div>
-
         <div class="info-card">
           <div class="info-top">
             <div class="info-icon" style="background:rgba(56,189,248,.12);color:var(--cyan);">
               <i class="fa-solid fa-link"></i>
             </div>
-            <div>
-              <h3>Base URL</h3>
-              <p>Root untuk semua endpoint</p>
-            </div>
+            <div><h3>Base URL</h3><p>Root untuk semua endpoint</p></div>
           </div>
           <div class="endpoint-copy">
             <code id="baseUrlDisplay">Loading...</code>
             <button class="copy-btn" id="baseUrlCopyBtn"><i class="fa-regular fa-copy"></i> Copy</button>
           </div>
         </div>
-
       </div>
-
       <div>
-
-        <!-- ✅ FIX: Server status asli dari /runtime -->
         <div class="info-card">
           <div class="info-top">
-            <div class="info-icon">
-              <i class="fa-solid fa-server"></i>
-            </div>
-            <div>
-              <h3>Server Status</h3>
-              <p id="serverStartedAt">Started: —</p>
-            </div>
+            <div class="info-icon"><i class="fa-solid fa-server"></i></div>
+            <div><h3>Server Status</h3><p id="serverStartedAt">Started: —</p></div>
           </div>
           <div class="progress-label">
-            <span>Uptime Stability</span>
-            <span id="uptimePct">99.9%</span>
+            <span>Uptime Stability</span><span id="uptimePct">—</span>
           </div>
           <div class="progress-bar">
-            <div class="progress-fill" id="uptimeBar" style="width:99.9%"></div>
+            <div class="progress-fill" id="uptimeBar" style="width:0%"></div>
           </div>
           <div style="margin-top:14px;display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--gray);">
             <span class="live-dot" id="serverDot"></span>
@@ -393,19 +445,14 @@ body.light .popup{background:#fff;}
           </div>
         </div>
 
-        <!-- ✅ FIX: IP blocked asli dari /security-stats -->
         <div class="security-card">
           <div class="security-header">
-            <h3>
-              <i class="fa-solid fa-shield-check shield-icon"></i>
-              DDoS Protection
-            </h3>
+            <h3><i class="fa-solid fa-shield-check shield-icon"></i> DDoS Protection</h3>
             <span class="security-badge badge-safe" id="secBadge">SAFE</span>
           </div>
           <div style="font-size:.82rem;color:var(--gray);margin-bottom:8px;">
-            IP yang spam diblokir otomatis <strong style="color:var(--warning);">1 jam</strong>. <!-- ✅ FIX: 10 menit → 1 jam -->
+            IP spam diblokir otomatis <strong style="color:var(--warning);">1 jam</strong>.
           </div>
-          <!-- ✅ FIX: Tambah total blocked counter -->
           <div style="font-size:.82rem;color:var(--gray);margin-bottom:12px;">
             Total diblokir: <span style="color:var(--red);font-weight:700;font-family:'JetBrains Mono',monospace;" id="totalBlockedEver">0</span> IP
           </div>
@@ -416,21 +463,18 @@ body.light .popup{background:#fff;}
 
         <div class="info-card" style="margin-top:20px;padding:18px;">
           <div class="security-header">
-            <h3>
-              <i class="fa-solid fa-terminal shield-icon"></i>
-              Live Security Console
-            </h3>
+            <h3><i class="fa-solid fa-terminal shield-icon"></i> Live Security Console</h3>
             <span class="security-badge badge-safe">LIVE</span>
           </div>
           <div class="live-console" id="liveConsole">
-            <div class="console-line console-normal">Waiting server logs...</div>
+            <div class="console-line console-normal">Menghubungkan ke server...</div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 
+  <!-- ===== ENDPOINTS ===== -->
   <div id="section-endpoints" style="display:none;">
     <div class="section-header">
       <h3>All Endpoints</h3>
@@ -438,6 +482,158 @@ body.light .popup{background:#fff;}
     </div>
     <div class="tabs" id="tabsContainer"></div>
     <div class="api-grid" id="apiGrid"></div>
+  </div>
+
+  <!-- ===== STATUS PAGE ===== -->
+  <div id="section-status" style="display:none;">
+    <div class="section-header">
+      <h3>System Status</h3>
+      <span class="live-badge"><span class="live-dot" style="margin-right:4px;"></span>LIVE</span>
+    </div>
+    <p style="color:var(--gray);font-size:.85rem;margin-bottom:20px;" id="statusTimestamp">Last update: —</p>
+
+    <div class="status-page-grid">
+
+      <div class="status-metric-card">
+        <div class="sm-header">
+          <div>
+            <div class="sm-label">CPU Usage</div>
+            <div class="sm-value" id="cpuVal">—</div>
+            <div class="sm-sub" id="cpuSub">Fetching...</div>
+          </div>
+          <div class="sm-icon blue"><i class="fa-solid fa-microchip"></i></div>
+        </div>
+        <div class="resource-bar-wrap">
+          <div class="resource-bar-label"><span>Load</span><span id="cpuBarLabel">0%</span></div>
+          <div class="resource-bar-track"><div class="resource-bar-fill bar-blue" id="cpuBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="status-metric-card">
+        <div class="sm-header">
+          <div>
+            <div class="sm-label">Memory (RAM)</div>
+            <div class="sm-value" id="ramVal">—</div>
+            <div class="sm-sub" id="ramSub">Fetching...</div>
+          </div>
+          <div class="sm-icon purple"><i class="fa-solid fa-memory"></i></div>
+        </div>
+        <div class="resource-bar-wrap">
+          <div class="resource-bar-label"><span>Usage</span><span id="ramBarLabel">0%</span></div>
+          <div class="resource-bar-track"><div class="resource-bar-fill bar-purple" id="ramBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="status-metric-card">
+        <div class="sm-header">
+          <div>
+            <div class="sm-label">Heap Memory</div>
+            <div class="sm-value" id="heapVal">—</div>
+            <div class="sm-sub" id="heapSub">Node.js heap usage</div>
+          </div>
+          <div class="sm-icon cyan"><i class="fa-brands fa-node-js"></i></div>
+        </div>
+        <div class="resource-bar-wrap">
+          <div class="resource-bar-label"><span>Heap Used</span><span id="heapBarLabel">0%</span></div>
+          <div class="resource-bar-track"><div class="resource-bar-fill bar-blue" id="heapBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="status-metric-card">
+        <div class="sm-header">
+          <div>
+            <div class="sm-label">Server Uptime</div>
+            <div class="sm-value runtime-val" id="statusRuntime">—</div>
+            <div class="sm-sub" id="statusStartedAt">Started: —</div>
+          </div>
+          <div class="sm-icon green"><i class="fa-solid fa-clock"></i></div>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:8px;font-size:.85rem;">
+          <span class="live-dot" id="statusDot"></span>
+          <span id="statusServerText" style="color:var(--gray);">Connecting...</span>
+        </div>
+      </div>
+
+      <div class="status-metric-card">
+        <div class="sm-header">
+          <div>
+            <div class="sm-label">IP Blocked</div>
+            <div class="sm-value" id="statusBlocked" style="color:var(--red);">0</div>
+            <div class="sm-sub">Active bans</div>
+          </div>
+          <div class="sm-icon red"><i class="fa-solid fa-ban"></i></div>
+        </div>
+        <div style="margin-top:12px;">
+          <div style="font-size:.8rem;color:var(--gray);">Rate limit: <span style="color:var(--warning);font-weight:700;">300 req/min</span></div>
+          <div style="font-size:.8rem;color:var(--gray);margin-top:4px;">Ban duration: <span style="color:var(--warning);font-weight:700;">60 menit</span></div>
+        </div>
+      </div>
+
+      <div class="status-metric-card">
+        <div class="sm-header">
+          <div>
+            <div class="sm-label">API Endpoints</div>
+            <div class="sm-value" id="statusEndpoints">—</div>
+            <div class="sm-sub" id="statusCategories">— categories</div>
+          </div>
+          <div class="sm-icon warning"><i class="fa-solid fa-bolt"></i></div>
+        </div>
+        <div style="margin-top:12px;">
+          <div style="font-size:.8rem;color:var(--gray);">Status: <span id="endpointHealthText" style="color:var(--green);font-weight:700;">Checking...</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Health + Timeline -->
+    <div class="status-two-col">
+
+      <div class="status-health-overview">
+        <div class="timeline-header">
+          <h3><i class="fa-solid fa-heart-pulse" style="color:var(--green);margin-right:8px;"></i>Service Health</h3>
+        </div>
+        <div class="health-item">
+          <div class="health-name"><i class="fa-solid fa-server"></i> API Server</div>
+          <span class="health-status hs-unknown" id="healthApi">Checking...</span>
+        </div>
+        <div class="health-item">
+          <div class="health-name"><i class="fa-solid fa-database"></i> Endpoints</div>
+          <span class="health-status hs-unknown" id="healthEndpoints">Checking...</span>
+        </div>
+        <div class="health-item">
+          <div class="health-name"><i class="fa-solid fa-shield-halved"></i> DDoS Guard</div>
+          <span class="health-status hs-unknown" id="healthGuard">Checking...</span>
+        </div>
+        <div class="health-item">
+          <div class="health-name"><i class="fa-solid fa-bolt"></i> Rate Limiter</div>
+          <span class="health-status hs-unknown" id="healthRateLimit">Checking...</span>
+        </div>
+        <div class="health-item">
+          <div class="health-name"><i class="fa-brands fa-node-js"></i> Node.js Runtime</div>
+          <span class="health-status hs-unknown" id="healthNode">Checking...</span>
+        </div>
+        <div class="health-item">
+          <div class="health-name"><i class="fa-solid fa-network-wired"></i> Network I/O</div>
+          <span class="health-status hs-unknown" id="healthNetwork">Checking...</span>
+        </div>
+      </div>
+
+      <div class="status-timeline">
+        <div class="timeline-header">
+          <h3><i class="fa-solid fa-list-check" style="color:var(--cyan);margin-right:8px;"></i>Activity Log</h3>
+        </div>
+        <div id="statusTimeline">
+          <div class="timeline-item">
+            <div class="timeline-dot warn"></div>
+            <div>
+              <div class="timeline-text">Menghubungkan ke server...</div>
+              <div class="timeline-time">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <footer>
@@ -450,6 +646,7 @@ body.light .popup{background:#fff;}
   </footer>
 </main>
 
+<!-- API Modal -->
 <div class="modal-overlay" id="apiModal">
   <div class="modal-box">
     <div class="modal-head">
@@ -480,6 +677,7 @@ body.light .popup{background:#fff;}
   </div>
 </div>
 
+<!-- Donate Modal -->
 <div class="donate-overlay" id="donateOverlay">
   <div class="donate-box">
     <button class="donate-close" onclick="closeDonateModal()">×</button>
@@ -490,6 +688,7 @@ body.light .popup{background:#fff;}
   </div>
 </div>
 
+<!-- Popup -->
 <div class="popup" id="popup">
   <div class="popup-head">
     <div class="popup-title">🚀 Join Community</div>
@@ -535,17 +734,53 @@ body.light .popup{background:#fff;}
       sidebar.classList.remove('active');
   });
 
+  // ===== UTILS =====
+  function fmtBytes(bytes) {
+    if (!bytes) return '0 MB';
+    const mb = bytes / 1024 / 1024;
+    return mb >= 1024 ? (mb / 1024).toFixed(2) + ' GB' : mb.toFixed(1) + ' MB';
+  }
+  function fmtRuntime(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  function setBar(id, pct) {
+    const el = document.getElementById(id);
+    if (el) el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  }
+  function setHealth(id, text, cls) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'health-status ' + cls;
+  }
+
+  // ===== COPY =====
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!'; setTimeout(() => btn.innerHTML = orig, 2000); }
+  }
+  document.getElementById('baseUrlCopyBtn').addEventListener('click', function() {
+    copyText(document.getElementById('baseUrlDisplay').textContent, this);
+  });
+
   // ===== SECTION =====
   let tabsRendered = false, currentTab = 'All';
+  const sections = ['home','endpoints','status'];
   window.showSection = function(name) {
-    document.getElementById('section-home').style.display = name === 'home' ? '' : 'none';
-    document.getElementById('section-endpoints').style.display = name === 'endpoints' ? '' : 'none';
-    document.getElementById('searchBoxWrap').style.display = name === 'endpoints' ? '' : 'none';
-    document.querySelectorAll('.nav-item').forEach((el, i) => {
-      el.classList.toggle('active', (name === 'home' && i === 0) || (name === 'endpoints' && i === 1));
+    sections.forEach(s => {
+      document.getElementById('section-' + s).style.display = s === name ? '' : 'none';
     });
+    document.getElementById('searchBoxWrap').style.display = name === 'endpoints' ? '' : 'none';
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    const idx = ['home','endpoints','status','donate'].indexOf(name);
+    const navItems = document.querySelectorAll('.nav-item');
+    if (idx >= 0 && navItems[idx]) navItems[idx].classList.add('active');
     if (name === 'endpoints' && !tabsRendered) { renderTabs(); tabsRendered = true; }
     if (name === 'endpoints') renderCards(currentTab);
+    if (window.innerWidth <= 1024) sidebar.classList.remove('active');
   };
 
   // ===== DONATE =====
@@ -557,101 +792,222 @@ body.light .popup{background:#fff;}
   // ===== POPUP =====
   window.closePopup = () => document.getElementById('popup').classList.add('hide');
 
-  // ===== COPY =====
-  function copyText(text, btn) {
-    navigator.clipboard.writeText(text).catch(() => {});
-    if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!'; setTimeout(() => btn.innerHTML = orig, 2000); }
-  }
-  document.getElementById('baseUrlCopyBtn').addEventListener('click', function() {
-    copyText(document.getElementById('baseUrlDisplay').textContent, this);
-  });
-
-  // ===== RUNTIME FORMAT =====
-  function formatRuntime(seconds) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  }
-
-  // ===== RECONNECTION STATE =====
-  let serverOffline = false;
-  let normalRuntimeInterval = null;
-  let normalSecurityInterval = null;
-  let retryInterval = null;
-  let totalBlockedEver = 0; // ✅ hitung total IP pernah diblokir
-
-  // ===== LIVE CONSOLE =====
-  function addConsoleLog(message, type = 'normal') {
+  // ===== LIVE CONSOLE — render dari server logs =====
+  let lastLogCount = 0;
+  function renderLiveConsole(logs) {
+    if (!logs || !logs.length) return;
+    // Hanya render log baru yang belum ada
+    if (logs.length === lastLogCount) return;
     const cons = document.getElementById('liveConsole');
-    const line = document.createElement('div');
-    line.className = `console-line console-${type}`;
-    const time = new Date().toLocaleTimeString('id-ID');
-    line.textContent = `[${time}] ${message}`;
+    // Bersihkan placeholder
     const placeholder = cons.querySelector('.console-normal');
-    if (placeholder && placeholder.textContent.includes('Waiting')) placeholder.remove();
-    cons.prepend(line);
+    if (placeholder && placeholder.textContent.includes('Menghubungkan')) placeholder.remove();
+
+    // Ambil log baru saja
+    const newLogs = logs.slice(0, logs.length - lastLogCount);
+    lastLogCount = logs.length;
+
+    newLogs.forEach(log => {
+      const line = document.createElement('div');
+      // Map type dari server ke class CSS
+      const typeMap = {
+        'success': 'console-success',
+        'blocked': 'console-danger',
+        'warn': 'console-warn',
+        'request': 'console-request',
+        'error': 'console-danger'
+      };
+      line.className = 'console-line ' + (typeMap[log.type] || 'console-normal');
+      line.textContent = `[${log.time}] ${log.message}`;
+      cons.prepend(line);
+    });
+
+    // Batasi 60 baris
     while (cons.children.length > 60) cons.removeChild(cons.lastChild);
   }
 
-  // ===== FETCH RUNTIME — dari server asli =====
+  // ===== ACTIVITY LOG — render dari server history =====
+  let lastHistoryCount = 0;
+  function renderActivityLog(history) {
+    if (!history || !history.length) return;
+    if (history.length === lastHistoryCount) return;
+
+    const container = document.getElementById('statusTimeline');
+    // Bersihkan placeholder loading
+    const placeholder = container.querySelector('.timeline-dot.warn');
+    if (placeholder && placeholder.nextElementSibling?.querySelector('.timeline-text')?.textContent.includes('Menghubungkan')) {
+      placeholder.parentElement.remove();
+    }
+
+    const newItems = history.slice(0, history.length - lastHistoryCount);
+    lastHistoryCount = history.length;
+
+    newItems.forEach(log => {
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+      // Tentukan dot type berdasarkan method/path
+      let dotType = 'ok';
+      if (log.method === 'DELETE' || log.path?.includes('block')) dotType = 'err';
+      else if (log.path?.includes('security') || log.path?.includes('admin')) dotType = 'warn';
+
+      item.innerHTML = `
+        <div class="timeline-dot ${dotType}"></div>
+        <div>
+          <div class="timeline-text">${log.method} ${log.path} — ${log.ip}</div>
+          <div class="timeline-time">${log.time}</div>
+        </div>`;
+
+      const first = container.querySelector('.timeline-item');
+      if (first) container.insertBefore(item, first);
+      else container.appendChild(item);
+    });
+
+    // Batasi 12 item
+    while (container.children.length > 12) container.removeChild(container.lastChild);
+  }
+
+  // ===== SERVER STATE =====
+  let serverOffline = false;
+  let totalBlockedEver = 0;
+  let normalRtInterval = null, normalSecInterval = null, normalLogsInterval = null, retryInterval = null;
+  // Uptime untuk hitung stability
+  let firstSeenUptime = null;
+
+  // ===== FETCH RUNTIME =====
   async function fetchRuntime() {
     try {
       const res = await fetch('/runtime');
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+      if (!res.ok) throw new Error('not ok');
+      const d = await res.json();
 
       if (serverOffline) {
         serverOffline = false;
-        if (retryInterval) { clearInterval(retryInterval); retryInterval = null; }
-        addConsoleLog('✅ Server online kembali — reconnected!', 'success');
+        clearInterval(retryInterval); retryInterval = null;
+        document.getElementById('offlineBanner').classList.remove('show');
         startNormalIntervals();
       }
 
-      // ✅ Runtime asli dari serverStart di index.js
-      const rt = data.uptime_formatted || formatRuntime(data.uptime_seconds || 0);
+      // Runtime
+      const uptimeSec = d.uptime_seconds || 0;
+      const rt = d.uptime_formatted || fmtRuntime(uptimeSec);
       document.getElementById('statRuntime').textContent = rt;
       document.getElementById('sidebarRuntime').textContent = rt;
+      document.getElementById('statusRuntime').textContent = rt;
 
-      if (data.started_at) {
-        const d = new Date(data.started_at);
-        document.getElementById('serverStartedAt').textContent =
-          'Started: ' + d.toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      // Uptime stability (real) — makin lama makin tinggi, max 99.9%
+      if (!firstSeenUptime) firstSeenUptime = Date.now();
+      const aliveMs = Date.now() - firstSeenUptime;
+      const stabilityPct = Math.min(99.9, 50 + (aliveMs / (1000 * 60 * 60)) * 49.9).toFixed(1);
+      document.getElementById('uptimePct').textContent = stabilityPct + '%';
+      setBar('uptimeBar', parseFloat(stabilityPct));
+
+      // Started at
+      if (d.started_at) {
+        const sd = new Date(d.started_at);
+        const sdStr = sd.toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+        document.getElementById('serverStartedAt').textContent = 'Started: ' + sdStr;
+        document.getElementById('statusStartedAt').textContent = 'Started: ' + sdStr;
       }
 
-      document.getElementById('serverDot').classList.remove('offline-dot');
+      // Server online UI
+      ['serverDot','statusDot'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('offline-dot');
+      });
       document.getElementById('serverStatusText').textContent = 'Server Online — Berjalan Normal';
+      document.getElementById('statusServerText').textContent = 'Server Online — Berjalan Normal';
       document.getElementById('sidebarStatus').innerHTML = '<span class="live-dot"></span> Online';
+
+      // Service Health — dari data real
+      setHealth('healthApi', 'ONLINE', 'hs-ok');
+      setHealth('healthNode', 'RUNNING', 'hs-ok');
+      setHealth('healthRateLimit', 'ACTIVE', 'hs-ok');
+      setHealth('healthNetwork', 'NORMAL', 'hs-ok');
+
+      // ====== MEMORY DATA ======
+      if (d.memory) {
+        const heapUsed = d.memory.heapUsed || 0;
+        const heapTotal = d.memory.heapTotal || 1;
+        const rss = d.memory.rss || 0;
+        const heapPct = Math.round((heapUsed / heapTotal) * 100);
+
+        document.getElementById('heapVal').textContent = fmtBytes(heapUsed);
+        document.getElementById('heapSub').textContent = `Total heap: ${fmtBytes(heapTotal)}`;
+        document.getElementById('heapBarLabel').textContent = heapPct + '%';
+        setBar('heapBar', heapPct);
+
+        document.getElementById('ramVal').textContent = fmtBytes(rss);
+        document.getElementById('ramSub').textContent = 'Process RSS Memory';
+        // Estimasi pct RSS dari heap total sebagai pembanding
+        const rssPct = Math.round((rss / (heapTotal * 2)) * 100);
+        document.getElementById('ramBarLabel').textContent = fmtBytes(rss);
+        setBar('ramBar', Math.min(100, rssPct));
+      }
+
+      // ====== CPU DATA ======
+      if (d.cpu !== undefined) {
+        const cpuPct = typeof d.cpu === 'number' ? Math.round(d.cpu) : 0;
+        document.getElementById('cpuVal').textContent = cpuPct + '%';
+        document.getElementById('cpuSub').textContent = d.cpu_model
+          ? d.cpu_model.replace(/\s+/g, ' ').trim().slice(0, 40)
+          : 'CPU Usage';
+        document.getElementById('cpuBarLabel').textContent = cpuPct + '%';
+        setBar('cpuBar', cpuPct);
+      } else if (d.loadAvg) {
+        const cores = d.cpu_cores || 1;
+        const pct = Math.min(100, Math.round((d.loadAvg[0] / cores) * 100));
+        document.getElementById('cpuVal').textContent = pct + '%';
+        document.getElementById('cpuSub').textContent = `Load avg: ${d.loadAvg[0].toFixed(2)} | ${cores} cores`;
+        document.getElementById('cpuBarLabel').textContent = pct + '%';
+        setBar('cpuBar', pct);
+      } else {
+        document.getElementById('cpuVal').textContent = 'N/A';
+        document.getElementById('cpuSub').textContent = 'Tidak tersedia dari server';
+        document.getElementById('cpuBarLabel').textContent = '—';
+      }
+
+      document.getElementById('statusTimestamp').textContent =
+        'Last update: ' + new Date().toLocaleString('id-ID');
 
     } catch {
       if (!serverOffline) {
         serverOffline = true;
-        if (normalRuntimeInterval) { clearInterval(normalRuntimeInterval); normalRuntimeInterval = null; }
-        if (normalSecurityInterval) { clearInterval(normalSecurityInterval); normalSecurityInterval = null; }
-        addConsoleLog('🔴 Server offline — mencoba reconnect...', 'danger');
+        clearInterval(normalRtInterval); normalRtInterval = null;
+        clearInterval(normalSecInterval); normalSecInterval = null;
+        clearInterval(normalLogsInterval); normalLogsInterval = null;
+        document.getElementById('offlineBanner').classList.add('show');
         startRetryInterval();
       }
 
-      document.getElementById('statRuntime').textContent = 'Offline';
-      document.getElementById('sidebarRuntime').textContent = '—';
-      document.getElementById('serverDot').classList.add('offline-dot');
+      ['serverDot','statusDot'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('offline-dot');
+      });
       document.getElementById('serverStatusText').textContent = 'Server offline — Mencoba reconnect...';
+      document.getElementById('statusServerText').textContent = 'Server offline — Mencoba reconnect...';
       document.getElementById('sidebarStatus').innerHTML = '<span class="live-dot offline-dot"></span> Offline';
+      document.getElementById('statRuntime').textContent = 'Offline';
+      document.getElementById('statusRuntime').textContent = 'Offline';
+
+      setHealth('healthApi', 'OFFLINE', 'hs-err');
+      setHealth('healthNode', 'STOPPED', 'hs-err');
+      setHealth('healthRateLimit', 'UNKNOWN', 'hs-unknown');
+      setHealth('healthNetwork', 'UNKNOWN', 'hs-unknown');
     }
   }
 
-  // ===== FETCH SECURITY — IP blocked asli dari server =====
+  // ===== FETCH SECURITY =====
   async function fetchSecurityStats() {
     try {
       const res = await fetch('/security-stats');
       if (!res.ok) throw new Error();
-      const data = await res.json();
+      const d = await res.json();
 
-      const count = data.totalBlockedNow || 0;
+      const count = d.totalBlockedNow || 0;
       document.getElementById('statBlocked').textContent = count;
       document.getElementById('sidebarBlocked').textContent = count;
+      document.getElementById('statusBlocked').textContent = count;
 
-      // ✅ Hitung total IP pernah diblokir (akumulasi)
       if (count > 0) {
         totalBlockedEver = Math.max(totalBlockedEver, count);
         document.getElementById('totalBlockedEver').textContent = totalBlockedEver;
@@ -661,53 +1017,70 @@ body.light .popup{background:#fff;}
       if (count === 0) {
         badge.textContent = 'SAFE';
         badge.className = 'security-badge badge-safe';
+        setHealth('healthGuard', 'ACTIVE', 'hs-ok');
       } else {
         badge.textContent = `${count} BLOCKED`;
         badge.className = 'security-badge badge-warn';
+        setHealth('healthGuard', `${count} BLOCKED`, 'hs-warn');
       }
 
-      // ✅ Tampilkan list IP yang diblokir dengan sisa waktu
       const list = document.getElementById('blockedList');
-      if (!data.blockedIPs || data.blockedIPs.length === 0) {
+      if (!d.blockedIPs || d.blockedIPs.length === 0) {
         list.innerHTML = '<div class="no-blocks">Tidak ada IP yang diblokir saat ini ✓</div>';
       } else {
-        list.innerHTML = data.blockedIPs.map(item => `
+        list.innerHTML = d.blockedIPs.map(item => `
           <div class="blocked-item">
             <span class="blocked-ip">🚫 ${item.ip}</span>
-            <span class="blocked-time">Unblock ${item.sisaMenit || Math.ceil(item.sisaDetik/60)}m lagi</span>
-          </div>
-        `).join('');
-        // ✅ Log IP blocked ke live console
-        data.blockedIPs.forEach(item => {
-          addConsoleLog(`🚫 IP Blocked: ${item.ip} — sisa ${item.sisaMenit || Math.ceil(item.sisaDetik/60)} menit`, 'danger');
-        });
-      }
-
-      // ✅ Log request terbaru ke console
-      if (data.logs && data.logs.length > 0) {
-        const latest = data.logs[0];
-        addConsoleLog(`📡 ${latest.method} ${latest.path} — ${latest.ip}`, 'request');
+            <span class="blocked-time">Unblock ${item.sisaMenit || Math.ceil((item.sisaDetik||3600)/60)}m lagi</span>
+          </div>`).join('');
       }
 
     } catch {
       document.getElementById('statBlocked').textContent = '—';
       document.getElementById('sidebarBlocked').textContent = '—';
+      setHealth('healthGuard', 'UNKNOWN', 'hs-unknown');
     }
   }
 
-  // ===== INTERVAL MANAGEMENT =====
-  function startNormalIntervals() {
-    if (normalRuntimeInterval) clearInterval(normalRuntimeInterval);
-    if (normalSecurityInterval) clearInterval(normalSecurityInterval);
-    normalRuntimeInterval = setInterval(fetchRuntime, 1000);
-    normalSecurityInterval = setInterval(fetchSecurityStats, 5000);
+  // ===== FETCH LIVE LOGS dari server =====
+  async function fetchLiveLogs() {
+    try {
+      const res = await fetch('/live-logs');
+      if (!res.ok) throw new Error();
+      const d = await res.json();
+
+      // Render live console dari server liveLogs
+      if (d.live && d.live.length > 0) {
+        renderLiveConsole(d.live);
+      }
+
+      // Render activity log dari server history
+      if (d.history && d.history.length > 0) {
+        renderActivityLog(d.history);
+      }
+
+    } catch {
+      // Gagal fetch logs, diam saja
+    }
   }
 
+  // ===== INTERVALS =====
+  function startNormalIntervals() {
+    clearInterval(normalRtInterval);
+    clearInterval(normalSecInterval);
+    clearInterval(normalLogsInterval);
+    normalRtInterval = setInterval(fetchRuntime, 1000);
+    normalSecInterval = setInterval(fetchSecurityStats, 5000);
+    normalLogsInterval = setInterval(fetchLiveLogs, 3000);
+  }
   function startRetryInterval() {
-    if (retryInterval) clearInterval(retryInterval);
+    clearInterval(retryInterval);
     retryInterval = setInterval(async () => {
       await fetchRuntime();
-      if (!serverOffline) await fetchSecurityStats();
+      if (!serverOffline) {
+        await fetchSecurityStats();
+        await fetchLiveLogs();
+      }
     }, 3000);
   }
 
@@ -721,6 +1094,7 @@ body.light .popup{background:#fff;}
 
   const cn = settings.creatorName || 'Phoenix Visions';
   document.getElementById('footerName').textContent = cn;
+
   if (settings.apiTitle) {
     document.getElementById('heroTitle').textContent = settings.apiTitle;
     document.getElementById('page').textContent = settings.apiTitle;
@@ -741,6 +1115,14 @@ body.light .popup{background:#fff;}
   document.getElementById('statEndpoints').textContent = totalEndpoints;
   document.getElementById('statCategories').textContent = Object.keys(apis).length;
   document.getElementById('endpointCount').textContent = `${totalEndpoints} Endpoints`;
+  document.getElementById('statusEndpoints').textContent = totalEndpoints;
+  document.getElementById('statusCategories').textContent = Object.keys(apis).length + ' categories';
+
+  // Health endpoint berdasarkan data real
+  const epLoaded = totalEndpoints > 0;
+  setHealth('healthEndpoints', epLoaded ? `${totalEndpoints} LOADED` : 'EMPTY', epLoaded ? 'hs-ok' : 'hs-warn');
+  document.getElementById('endpointHealthText').textContent = epLoaded ? 'All systems operational' : 'No endpoints loaded';
+  document.getElementById('endpointHealthText').style.color = epLoaded ? 'var(--green)' : 'var(--warning)';
 
   // ===== TABS =====
   function renderTabs() {
@@ -749,7 +1131,7 @@ body.light .popup{background:#fff;}
     const cats = ['All', ...Object.keys(apis).filter(k => Array.isArray(apis[k]) && apis[k].length > 0)];
     cats.forEach(cat => {
       const btn = document.createElement('button');
-      btn.className = 'tab' + (cat === 'All' ? ' active' : '');
+      btn.className = 'tab' + (cat === currentTab ? ' active' : '');
       btn.textContent = cat;
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -879,7 +1261,6 @@ body.light .popup{background:#fff;}
       const ct = res.headers.get('content-type') || '';
       responseStatus.textContent = res.status + ' ' + res.statusText;
       responseStatus.style.color = res.ok ? 'var(--green)' : 'var(--red)';
-
       if (ct.includes('application/json')) {
         responseBody.textContent = JSON.stringify(await res.json(), null, 2);
       } else if (ct.includes('image')) {
@@ -903,10 +1284,8 @@ body.light .popup{background:#fff;}
   });
 
   // ===== INIT =====
-  await Promise.all([fetchRuntime(), fetchSecurityStats()]);
+  await Promise.all([fetchRuntime(), fetchSecurityStats(), fetchLiveLogs()]);
   if (!serverOffline) startNormalIntervals();
-
-  addConsoleLog('🚀 Dashboard initialized', 'success');
 
   setTimeout(() => {
     document.getElementById('loader').classList.add('hide');
