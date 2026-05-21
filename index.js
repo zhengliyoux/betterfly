@@ -76,7 +76,8 @@ const settings = {
 ================================= */
 
 const TG_TOKEN = process.env.TG_TOKEN || '8281901823:AAFDIM_zu-OQY3H5FsnaE6hcu_446fmjwiY';
-const TG_CHAT_ID = process.env.TG_CHAT_ID || '6772957208'
+const TG_CHAT_ID = process.env.TG_CHAT_ID || '6772957208';
+
 // Cooldown per event agar tidak spam notif Telegram
 const tgCooldown = {};
 
