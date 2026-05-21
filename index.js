@@ -4,6 +4,7 @@ const fs = require('fs');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+const os = require('os');
 require('dotenv').config();
 
 const app = express();
@@ -16,7 +17,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 
-app.use('/', express.static(path.join(__dirname, '/')));
 app.use('/', express.static(path.join(__dirname, 'ui')));
 app.use('/api', express.static(path.join(__dirname, 'api')));
 
@@ -85,27 +85,33 @@ const liveLogs = [];
 
 const ipRequests = {};
 const blockedIPs = {};
-const suspiciousIPs = {}; // track IP yang mencurigakan
+const suspiciousIPs = {};
 
-// ✅ Rate limit lebih wajar — dashboard sendiri ga kena block
 const RATE_LIMIT = 300;
 const BLOCK_DURATION = 60 * 60 * 1000; // 1 JAM
 
-// ✅ Bad user agents — block bot/scraper
 const BAD_AGENTS = [
   'python-requests', 'curl', 'wget', 'scrapy',
   'nikto', 'sqlmap', 'nmap', 'masscan',
   'zgrab', 'go-http-client', 'libwww'
 ];
 
+// ✅ Path internal yang DIKECUALIKAN dari rate limit & bad agent check
+const INTERNAL_PATHS = [
+  '/runtime',
+  '/security-stats',
+  '/live-logs',
+  '/set',
+  '/endpoints'
+];
+
 function formatRuntime(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// ✅ Helper: tambah log ke live console
 function addLiveLog(type, message) {
   liveLogs.unshift({
     type,
@@ -129,6 +135,20 @@ app.use((req, res, next) => {
 
   const ua = req.headers['user-agent'] || '';
   const now = Date.now();
+
+  // ✅ Skip semua pemeriksaan untuk internal paths (dashboard sendiri)
+  if (INTERNAL_PATHS.includes(req.path)) {
+    // Tetap log request tapi skip rate limit & bad agent
+    const logData = {
+      ip,
+      method: req.method,
+      path: req.path,
+      time: new Date().toLocaleString('id-ID')
+    };
+    requestLogs.unshift(logData);
+    if (requestLogs.length > 100) requestLogs.pop();
+    return next();
+  }
 
   // ✅ BLOCK 1: Bad User Agent (bot/scraper)
   const isBadAgent = BAD_AGENTS.some(b => ua.toLowerCase().includes(b));
@@ -218,16 +238,18 @@ app.use((req, res, next) => {
     chalk.white(ip)
   );
 
-  // ✅ Auto inject creator ke semua response JSON
+  // ✅ Auto inject creator ke semua response JSON (dengan guard aman)
   const originalJson = res.json;
   res.json = function (data) {
     if (
+      data &&
       typeof data === 'object' &&
+      !Array.isArray(data) &&
       req.path !== '/endpoints' &&
       req.path !== '/set'
     ) {
       return originalJson.call(this, {
-        creator: settings.creatorName || "Created Using SkyWings",
+        creator: settings.creatorName || 'Created Using SkyWings',
         ...data
       });
     }
@@ -246,17 +268,36 @@ app.get('/set', (req, res) => {
 });
 
 /* ===============================
-   RUNTIME API
+   RUNTIME API — Fix: include memory & CPU
 ================================= */
 
 app.get('/runtime', (req, res) => {
   const uptimeSeconds = Math.floor((Date.now() - serverStart) / 1000);
+
+  // Memory dari Node.js process
+  const mem = process.memoryUsage();
+
+  // CPU info dari OS
+  const cpus = os.cpus();
+  const loadAvg = os.loadavg();
+  const cpuPct = Math.min(100, Math.round((loadAvg[0] / (cpus.length || 1)) * 100));
+
   res.json({
     status: true,
     uptime_seconds: uptimeSeconds,
     uptime_formatted: formatRuntime(uptimeSeconds),
     started_at: new Date(serverStart).toISOString(),
-    total_request: global.totalreq
+    total_request: global.totalreq,
+    memory: {
+      rss: mem.rss,
+      heapUsed: mem.heapUsed,
+      heapTotal: mem.heapTotal,
+      external: mem.external
+    },
+    cpu: cpuPct,
+    cpu_cores: cpus.length,
+    cpu_model: cpus[0]?.model || 'Unknown CPU',
+    loadAvg: loadAvg
   });
 });
 
@@ -386,7 +427,6 @@ app.listen(PORT, () => {
   console.log(chalk.bgCyan.black(` 📦 Total Routes Loaded: ${totalRoutes} `));
   console.log(chalk.bgYellow.black(` 🛡️ Rate Limit: ${RATE_LIMIT} req/menit | Block: 1 jam `));
 
-  // Log startup ke live console
   addLiveLog('success', `🚀 Server started on port ${PORT}`);
   addLiveLog('success', `📦 ${totalRoutes} routes loaded`);
   addLiveLog('success', `🛡️ Anti-DDoS aktif — limit ${RATE_LIMIT} req/menit`);
