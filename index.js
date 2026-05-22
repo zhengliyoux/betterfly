@@ -300,7 +300,11 @@ app.use((req, res, next) => {
 
   const ua = req.headers['user-agent'] || '';
   const now = Date.now();
-  const isInternal = INTERNAL_PATHS.some(p => req.path === p || req.path.startsWith(p + '?'));
+  const isInternal = INTERNAL_PATHS.some(p =>
+  p === '/'
+    ? req.path === '/'
+    : req.path === p || req.path.startsWith(p + '?')
+);
   const isStatic = req.path.match(/\.(js|css|png|jpg|ico|html|map|woff|svg)$/);
 
   // STOP MODE
@@ -420,19 +424,22 @@ app.use((req, res, next) => {
     chalk.white(ip)
   );
 
-  const originalJson = res.json;
-  res.json = function (data) {
-    if (data && typeof data === 'object' && !Array.isArray(data) &&
-      req.path !== '/endpoints' && req.path !== '/set') {
-      const extra = {};
-      if (global.broadcastMessage) {
-        extra.broadcast = global.broadcastMessage;
-        extra.broadcast_time = global.broadcastTime;
-      }
-      return originalJson.call(this, { creator: settings.creatorName, ...extra, ...data });
+const originalJson = res.json;
+res.json = function (data) {
+  if (data && typeof data === 'object' && !Array.isArray(data) &&
+    req.path !== '/endpoints' && req.path !== '/set') {
+    const extra = {};
+    if (global.broadcastMessage) {
+      extra.broadcast = global.broadcastMessage;
+      extra.broadcast_time = global.broadcastTime;
     }
-    return originalJson.call(this, data);
-  };
+    // Tambahkan maintenance & stopped state ke SETIAP response
+    extra.maintenance = maintenanceMode;
+    extra.stopped = serverStopped;
+    return originalJson.call(this, { creator: settings.creatorName, ...extra, ...data });
+  }
+  return originalJson.call(this, data);
+};
 
   next();
 });
@@ -1053,4 +1060,4 @@ app.listen(PORT, () => {
   );
 });
 
-module.exports = app;
+module.exports = app; 
