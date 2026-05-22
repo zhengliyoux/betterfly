@@ -133,6 +133,64 @@ async function answerCb(id, text = '') {
 }
 
 /* ===============================
+   SERVER CONTROL
+================================= */
+
+// Restart Server
+app.get('/restart', async (req, res) => {
+
+  res.json({
+    status: true,
+    message: 'Server restarting...'
+  });
+
+  addLiveLog('warn', '♻️ Restart requested');
+
+  setTimeout(() => {
+    process.exit(1);
+  }, 2000);
+
+});
+
+// Stop Server
+app.get('/stop', async (req, res) => {
+
+  res.json({
+    status: true,
+    message: 'Server stopping...'
+  });
+
+  addLiveLog('blocked', '🛑 Stop requested');
+
+  setTimeout(() => {
+    process.exit(0);
+  }, 2000);
+
+});
+
+// Start Server (VPS/PM2)
+app.get('/start', async (req, res) => {
+
+  exec('pm2 start phoenix-api', (err, stdout, stderr) => {
+
+    if (err) {
+      return res.status(500).json({
+        status: false,
+        message: stderr || err.message
+      });
+    }
+
+    res.json({
+      status: true,
+      message: 'Server started.',
+      output: stdout
+    });
+
+  });
+
+});
+
+/* ===============================
    MENU KEYBOARDS
 ================================= */
 
