@@ -6,164 +6,52 @@ const cors = require('cors');
 const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
-const rateLimit = require('express-rate-limit');
-const slowDown = require('express-slow-down');
-const hpp = require('hpp');
-const mongoSanitize = require('express-mongo-sanitize');
-const winston = require('winston');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-/* ===============================
-   WINSTON LOGGER (PERSISTENT)
-================================= */
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.printf(({ timestamp, level, message }) => `[${timestamp}] [${level.toUpperCase()}] ${message}`)
-  ),
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error', maxsize: 5242880, maxFiles: 5 }),
-    new winston.transports.File({ filename: 'logs/combined.log', maxsize: 5242880, maxFiles: 10 }),
-    new winston.transports.Console({ format: winston.format.simple() })
-  ]
-});
-
-if (!fs.existsSync('logs')) fs.mkdirSync('logs');
-/* ===============================
-   CORS — STRICT ORIGIN
-================================= */
-
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow no-origin (mobile apps, Postman dev) or whitelisted
-    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS policy: Origin not allowed'));
-    }
-  },
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
-  credentials: false,
-  maxAge: 86400
-}));
-
-/* ===============================
-   BODY PARSER — SIZE LIMIT
-================================= */
-
-app.use(express.json({ limit: '100kb' }));
-app.use(express.urlencoded({ extended: false, limit: '100kb' }));
-
-/* ===============================
-   HTTP PARAMETER POLLUTION GUARD
-================================= */
-
-app.use(hpp());
-
-/* ===============================
-   MONGO/NOSQL INJECTION SANITIZE
-================================= */
-
-app.use(mongoSanitize({ replaceWith: '_' }));
-
-/* ===============================
-   EXPRESS RATE LIMIT (per IP)
-================================= */
-
-// Global rate limiter
-const globalLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: false,
-  keyGenerator: (req) =>
-    req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip,
-  handler: (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip;
-    addLiveLog('blocked', `🚫 Rate Limit: ${ip}`);
-    logger.warn(`Rate limit hit: ${ip} → ${req.path}`);
-    sendTelegram(`🚫 *Rate Limit*\n\`${ip}\` → \`${req.path}\``, `rl-${ip}`, 300000);
-    return res.status(429).json({
-      status: false, code: 429,
-      message: 'Terlalu banyak request. Coba lagi dalam 1 menit.'
-    });
-  }
-});
-
-// Slow down repeated requests before hard block
-const speedLimiter = slowDown({
-  windowMs: 60 * 1000,
-  delayAfter: 150,
-  delayMs: (hits) => (hits - 150) * 100,
-  maxDelayMs: 5000,
-  keyGenerator: (req) =>
-    req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip,
-});
-
-// Stricter limiter for API endpoints
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) =>
-    req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip,
-  handler: (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip;
-    addLiveLog('blocked', `🚫 API Rate Limit: ${ip}`);
-    return res.status(429).json({
-      status: false, code: 429,
-      message: 'API rate limit tercapai.'
-    });
-  }
-});
-
 app.enable("trust proxy");
 app.set("json spaces", 2);
 
-/* ===============================
-   STATIC FILES
-================================= */
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cors());
 
 app.use('/', express.static(path.join(__dirname, 'ui')));
 app.use('/api', express.static(path.join(__dirname, 'api')));
 
 /* ===============================
-   GLOBAL FUNCTIONS
+   GLOBAL FUNCTION
 ================================= */
 
 global.getBuffer = async (url, options = {}) => {
   try {
     const res = await axios({
-      method: 'get', url,
+      method: 'get',
+      url,
       headers: { 'DNT': 1, 'Upgrade-Insecure-Request': 1 },
       ...options,
-      responseType: 'arraybuffer',
-      timeout: 10000
+      responseType: 'arraybuffer'
     });
     return res.data;
-  } catch (err) { return err; }
+  } catch (err) {
+    return err;
+  }
 };
 
 global.fetchJson = async (url, options = {}) => {
   try {
     const res = await axios({
-      method: 'GET', url,
+      method: 'GET',
+      url,
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      ...options,
-      timeout: 10000
+      ...options
     });
     return res.data;
-  } catch (err) { return err; }
+  } catch (err) {
+    return err;
+  }
 };
 
 global.apikey = process.env.APIKEY || null;
@@ -192,10 +80,8 @@ let maintenanceMessage = "Server sedang dalam maintenance. Mohon coba beberapa s
 let serverStopped = false;
 let stopMessage = "Server sedang dihentikan sementara oleh admin.";
 
-const healthHistory = [];
-
 /* ===============================
-   TELEGRAM BOT SETUP
+   TELEGRAM BOT
 ================================= */
 
 const TG_TOKEN = process.env.TG_TOKEN || '8281901823:AAFDIM_zu-OQY3H5FsnaE6hcu_446fmjwiY';
@@ -213,7 +99,9 @@ async function sendTelegram(message, cooldownKey = null, cooldownMs = 60000) {
   }
   try {
     await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-      chat_id: TG_CHAT_ID, text: message, parse_mode: 'Markdown'
+      chat_id: TG_CHAT_ID,
+      text: message,
+      parse_mode: 'Markdown'
     });
   } catch {}
 }
@@ -237,7 +125,9 @@ async function editMsg(chatId, msgId, text, keyboard = null) {
 async function answerCb(id, text = '') {
   try {
     await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/answerCallbackQuery`, {
-      callback_query_id: id, text, show_alert: !!text
+      callback_query_id: id,
+      text,
+      show_alert: !!text
     });
   } catch {}
 }
@@ -272,10 +162,6 @@ const MAIN_MENU = () => [
   [
     { text: '📈 Request Stats', callback_data: 'req_stats' },
     { text: '🧠 Memory Detail', callback_data: 'memory_detail' }
-  ],
-  [
-    { text: '🛡️ Firewall Rules', callback_data: 'firewall_rules' },
-    { text: '⚙️ Config Info', callback_data: 'update_config' }
   ]
 ];
 
@@ -284,7 +170,6 @@ const BACK_BTN = [[{ text: '« Kembali ke Menu', callback_data: 'main_menu' }]];
 /* ===============================
    SECURITY SYSTEM
 ================================= */
-
 const serverStart = Date.now();
 
 const requestLogs = [];
@@ -295,58 +180,28 @@ const attackLog = [];
 const ipRequests = {};
 const blockedIPs = {};
 const suspiciousIPs = {};
-const ipBlacklistPermanent = new Set();
-const ipWhitelist = new Set();
-const blockCount = {};
-
-// Per-endpoint abuse tracking
-const endpointAbuse = {};
 
 const RATE_LIMIT_API = 300;
 const RATE_LIMIT_INTERNAL = 1200;
-const BLOCK_DURATION = 60 * 60 * 1000;
-const PERM_BAN_THRESHOLD = 3;
+const BLOCK_DURATION = 60 * 60 * 1000; // 1 jam
 
 const INTERNAL_PATHS = [
-  '/runtime', '/security-stats', '/live-logs', '/set', '/endpoints', '/'
+  '/runtime', '/security-stats', '/live-logs',
+  '/set', '/endpoints', '/'
 ];
 
 const BAD_AGENTS = [
-  'python-requests', 'curl', 'wget', 'scrapy', 'nikto', 'sqlmap', 'nmap',
-  'masscan', 'zgrab', 'go-http-client', 'libwww', 'dirbuster', 'hydra',
-  'metasploit', 'nuclei', 'gobuster', 'wfuzz', 'burpsuite', 'acunetix',
-  'nessus', 'openvas', 'w3af', 'appscan', 'havij', 'pangolin', 'zgrab2',
-  'httpx', 'ffuf', 'feroxbuster', 'whatweb', 'wappalyzer', 'shodan'
+  'python-requests', 'curl', 'wget', 'scrapy',
+  'nikto', 'sqlmap', 'nmap', 'masscan',
+  'zgrab', 'go-http-client', 'libwww',
+  'dirbuster', 'hydra', 'metasploit',
+  'nuclei', 'gobuster', 'wfuzz'
 ];
 
 const SUSPICIOUS_PATHS = [
-  '/admin', '/wp-admin', '/phpmyadmin', '/.env', '/config', '/shell',
-  '/backdoor', '/eval', '/../', '/etc/passwd', '/proc/', '/cmd',
-  '/xmlrpc', '/wp-login', '/.git', '/server-status', '/actuator',
-  '/api/v1/pods', '/cgi-bin', '/setup.php', '/.htaccess', '/web.config',
-  '/dump', '/db', '/database', '/backup', '/bak', '/old', '/test',
-  '/debug', '/trace', '/console', '/manager', '/system', '/root',
-  '/passwd', '/shadow', '/boot', '/var/', '/tmp/', '/proc/self'
-];
-
-const ATTACK_PATTERNS = [
-  /<script/i, /union.*select/i, /select.*from/i, /drop.*table/i,
-  /insert.*into/i, /exec(\s|\+)+\(/i, /javascript:/i, /vbscript:/i,
-  /onload\s*=/i, /onerror\s*=/i, /alert\s*\(/i, /document\.cookie/i,
-  /\.\.\//,
-  // Additional patterns
-  /base64_decode/i, /eval\s*\(/i, /system\s*\(/i, /passthru/i,
-  /shell_exec/i, /phpinfo/i, /<iframe/i, /<object/i, /data:text\/html/i,
-  /fromcharcode/i, /chr\s*\(\s*\d/i, /0x[0-9a-f]{2}/i,
-  /\bOR\b.*\b1\s*=\s*1/i, /\bAND\b.*\b1\s*=\s*1/i,
-  /\bWAITFOR\b.*\bDELAY\b/i, /\bSLEEP\s*\(/i, /\bBENCHMARK\s*\(/i
-];
-
-// Body attack patterns (check POST/PUT body content)
-const BODY_ATTACK_PATTERNS = [
-  /<script/i, /union.*select/i, /drop.*table/i,
-  /exec(\s|\+)+\(/i, /javascript:/i, /base64_decode/i,
-  /eval\s*\(/i, /system\s*\(/i, /shell_exec/i
+  '/admin', '/wp-admin', '/phpmyadmin', '/.env',
+  '/config', '/shell', '/backdoor', '/eval',
+  '/../', '/etc/passwd', '/proc/', '/cmd'
 ];
 
 function formatRuntime(seconds) {
@@ -357,19 +212,17 @@ function formatRuntime(seconds) {
 }
 
 function addLiveLog(type, message) {
-  const entry = { type, time: new Date().toLocaleTimeString('id-ID'), message };
-  liveLogs.unshift(entry);
+  liveLogs.unshift({
+    type,
+    time: new Date().toLocaleTimeString('id-ID'),
+    message
+  });
   if (liveLogs.length > 100) liveLogs.pop();
-  // Also persist to winston
-  if (type === 'blocked') logger.warn(message);
-  else if (type === 'warn') logger.warn(message);
-  else logger.info(message);
 }
 
 function addAttackLog(ip, type, detail) {
   attackLog.unshift({ ip, type, detail, time: new Date().toLocaleString('id-ID') });
   if (attackLog.length > 50) attackLog.pop();
-  logger.warn(`ATTACK [${type}] IP: ${ip} | Detail: ${detail}`);
 }
 
 function makeBar(pct) {
@@ -377,25 +230,6 @@ function makeBar(pct) {
   const empty = 10 - filled;
   const color = pct > 80 ? '🔴' : pct > 60 ? '🟡' : '🟢';
   return `[${color.repeat(filled)}${'⬜'.repeat(empty)}]`;
-}
-
-/* ===============================
-   API KEY VALIDATOR MIDDLEWARE
-================================= */
-
-function validateApiKey(req, res, next) {
-  if (!global.apikey) return next(); // No key configured = open
-  const key = req.headers['x-api-key'] || req.query.apikey;
-  if (!key || key !== global.apikey) {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip;
-    addLiveLog('blocked', `🔑 Invalid API Key: ${ip} → ${req.path}`);
-    logger.warn(`Invalid API Key attempt: ${ip} → ${req.path}`);
-    return res.status(401).json({
-      status: false, code: 401,
-      message: 'API key tidak valid atau tidak disertakan.'
-    });
-  }
-  next();
 }
 
 /* ===============================
@@ -416,35 +250,18 @@ async function runHealthCheck() {
   if (heapPct > 80) problems.push(`💾 Heap memory tinggi: *${heapPct}%*`);
   if (parseFloat(rssMb) > 512) problems.push(`🧠 RSS Memory besar: *${rssMb} MB*`);
   if (Object.keys(blockedIPs).length > 20) problems.push(`🚫 IP Blocked banyak: *${Object.keys(blockedIPs).length} IP*`);
-  if (attackLog.length > 0) {
-    const lastAttackTime = new Date(attackLog[0].time).getTime();
-    if (!isNaN(lastAttackTime) && (Date.now() - lastAttackTime) < 60000) {
-      problems.push(`⚠️ Ada serangan dalam 1 menit terakhir`);
-    }
-  }
-
-  const healthData = {
-    time: new Date().toLocaleString('id-ID'),
-    cpu: cpuPct, heap: heapPct, rss: rssMb,
-    uptime: formatRuntime(uptimeSec),
-    blocked: Object.keys(blockedIPs).length,
-    problems
-  };
-  healthHistory.unshift(healthData);
-  if (healthHistory.length > 30) healthHistory.pop();
 
   if (problems.length > 0) {
-    const alertKey = 'health-' + problems.length + '-' + cpuPct;
     await sendTelegram(
       `🚨 *HEALTH ALERT — ${settings.apiTitle}*\n\n` +
       `Ada *${problems.length} masalah* terdeteksi:\n\n` +
       problems.map((p, i) => `${i + 1}. ${p}`).join('\n') +
       `\n\n🕐 ${new Date().toLocaleString('id-ID')}`,
-      alertKey, 300000
+      'health-alert', 300000
     );
   }
 
-  return healthData;
+  return { cpu: cpuPct, heap: heapPct, rss: rssMb, uptime: formatRuntime(uptimeSec), blocked: Object.keys(blockedIPs).length, problems };
 }
 
 setInterval(runHealthCheck, 60 * 1000);
@@ -463,7 +280,6 @@ setInterval(() => {
       cleaned++;
     }
   }
-  // Cleanup old ipRequests entries
   for (const ip of Object.keys(ipRequests)) {
     ipRequests[ip] = ipRequests[ip].filter(t => now - t < 60000);
     if (ipRequests[ip].length === 0) delete ipRequests[ip];
@@ -472,20 +288,15 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 /* ===============================
-   APPLY GLOBAL RATE LIMITERS
-================================= */
-
-app.use(globalLimiter);
-app.use(speedLimiter);
-
-/* ===============================
-   MAIN SECURITY MIDDLEWARE
+   MIDDLEWARE ANTI-DDOS
 ================================= */
 
 app.use((req, res, next) => {
   const ip =
     req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-    req.socket.remoteAddress || req.ip || 'unknown';
+    req.socket.remoteAddress ||
+    req.ip ||
+    'unknown';
 
   const ua = req.headers['user-agent'] || '';
   const now = Date.now();
@@ -510,101 +321,80 @@ app.use((req, res, next) => {
     });
   }
 
-  // WHITELIST
-  if (ipWhitelist.has(ip)) return next();
-
-  // PERMANENT BAN
-  if (ipBlacklistPermanent.has(ip)) {
-    addLiveLog('blocked', `☠️ Perm-Banned: ${ip}`);
-    logger.warn(`Perm-banned IP attempt: ${ip} → ${req.path}`);
-    return res.status(403).json({ status: false, code: 403, message: 'Access denied.' });
-  }
-
   // No User-Agent
   if (!ua && !isInternal) {
-    addLiveLog('blocked', `🚫 No UA: ${ip}`);
-    addAttackLog(ip, 'No-UA', req.path);
-    sendTelegram(`🚫 *No UA Blocked*\n\`${ip}\` → \`${req.path}\``, `no-ua-${ip}`, 300000);
+    addLiveLog('blocked', `🚫 Blocked [No UA]: ${ip}`);
+    sendTelegram(
+      `🚫 *Blocked — No User-Agent*\n\`IP: ${ip}\`\nPath: \`${req.path}\`\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `no-ua-${ip}`, 300000
+    );
     return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
-  // Bad User-Agent
+  // Bad User Agent
   const isBadAgent = BAD_AGENTS.some(b => ua.toLowerCase().includes(b));
   if (isBadAgent) {
-    addLiveLog('blocked', `🚫 Bad Agent: ${ip}`);
+    addLiveLog('blocked', `🚫 Blocked [Bad Agent]: ${ip} — ${ua.slice(0, 40)}`);
     addAttackLog(ip, 'Bad-UA', ua.slice(0, 60));
-    sendTelegram(`🤖 *Bad UA Blocked*\n\`${ip}\`\nUA: \`${ua.slice(0,50)}\``, `bad-ua-${ip}`, 300000);
+    sendTelegram(
+      `🤖 *Blocked — Bad User-Agent*\n\`IP: ${ip}\`\nUA: \`${ua.slice(0, 60)}\`\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `bad-agent-${ip}`, 300000
+    );
     return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
   // Path Scan
-  const isSuspPath = SUSPICIOUS_PATHS.some(p => req.path.toLowerCase().includes(p));
-  if (isSuspPath) {
-    autoBlock(ip, 'Path-Scan', req.path, now);
+  const isSuspiciousPath = SUSPICIOUS_PATHS.some(p => req.path.toLowerCase().includes(p));
+  if (isSuspiciousPath) {
+    blockedIPs[ip] = now + BLOCK_DURATION;
+    addLiveLog('blocked', `🚫 Blocked [Path Scan]: ${ip} — tried ${req.path}`);
+    addAttackLog(ip, 'Path-Scan', req.path);
     sendTelegram(
-      `🔍 *Path Scan Blocked*\n\`${ip}\`\nPath: \`${req.path}\``,
+      `🔍 *Blocked — Path Scanning*\n\`IP: ${ip}\`\nPath: \`${req.path}\`\nStatus: Diblokir 1 jam\nWaktu: ${new Date().toLocaleString('id-ID')}`,
       `scan-${ip}`, 300000
     );
     return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
   }
 
-  // XSS / SQLi in URL
-  const fullUrl = req.path + '?' + JSON.stringify(req.query);
-  if (ATTACK_PATTERNS.some(p => p.test(fullUrl))) {
-    autoBlock(ip, 'XSS/SQLi-URL', fullUrl.slice(0, 80), now);
-    sendTelegram(
-      `💉 *XSS/SQLi URL Detected*\n\`${ip}\`\nPath: \`${req.path}\``,
-      `attack-${ip}`, 180000
-    );
-    return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
-  }
-
-  // XSS / SQLi in REQUEST BODY (NEW)
-  if (req.body && typeof req.body === 'object') {
-    const bodyStr = JSON.stringify(req.body);
-    if (BODY_ATTACK_PATTERNS.some(p => p.test(bodyStr))) {
-      autoBlock(ip, 'XSS/SQLi-BODY', bodyStr.slice(0, 80), now);
-      sendTelegram(
-        `💉 *XSS/SQLi BODY Detected*\n\`${ip}\`\nPath: \`${req.path}\``,
-        `attack-body-${ip}`, 180000
-      );
-      return res.status(403).json({ status: false, code: 403, message: 'Forbidden.' });
-    }
-  }
-
-  // Cek IP terblokir
+  // Cek IP yang sudah diblokir
   if (blockedIPs[ip]) {
     if (now < blockedIPs[ip]) {
-      const sisa = Math.ceil((blockedIPs[ip] - now) / 60000);
-      addLiveLog('blocked', `🔒 Still Blocked: ${ip} — sisa ${sisa}m`);
+      const sisaMenit = Math.ceil((blockedIPs[ip] - now) / 60000);
+      addLiveLog('blocked', `🔒 Still Blocked: ${ip} — sisa ${sisaMenit} menit`);
       return res.status(429).json({
         status: false, code: 429,
-        message: `IP kamu diblokir. Coba lagi dalam ${sisa} menit.`
+        message: `IP kamu diblokir. Coba lagi dalam ${sisaMenit} menit.`
       });
     } else {
       addLiveLog('success', `✅ Auto Unblocked: ${ip}`);
-      delete blockedIPs[ip]; delete suspiciousIPs[ip];
+      delete blockedIPs[ip];
+      delete suspiciousIPs[ip];
     }
   }
 
-  // Per-IP rate tracking (in-memory backup layer)
-  const rateLimit2 = isInternal ? RATE_LIMIT_INTERNAL : RATE_LIMIT_API;
+  // Rate Limit
+  const rateLimit = isInternal ? RATE_LIMIT_INTERNAL : RATE_LIMIT_API;
   if (!ipRequests[ip]) ipRequests[ip] = [];
   ipRequests[ip] = ipRequests[ip].filter(t => now - t < 60000);
   ipRequests[ip].push(now);
   const reqCount = ipRequests[ip].length;
 
-  if (reqCount > rateLimit2 * 0.7 && reqCount <= rateLimit2 && !suspiciousIPs[ip]) {
+  if (reqCount > rateLimit * 0.7 && reqCount <= rateLimit && !suspiciousIPs[ip]) {
     suspiciousIPs[ip] = true;
-    addLiveLog('warn', `⚠️ Suspicious: ${ip} — ${reqCount}/${rateLimit2}`);
-    sendTelegram(`⚠️ *IP Suspicious*\n\`${ip}\`\n${reqCount}/${rateLimit2} req/mnt`, `susp-${ip}`, 120000);
+    addLiveLog('warn', `⚠️ Suspicious: ${ip} — ${reqCount}/${rateLimit} req/menit`);
+    sendTelegram(
+      `⚠️ *IP Suspicious*\n\`IP: ${ip}\`\nRequest: \`${reqCount}/${rateLimit} per menit\`\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `suspicious-${ip}`, 120000
+    );
   }
 
-  if (reqCount > rateLimit2) {
-    autoBlock(ip, 'Rate-Limit', `${reqCount} req/mnt`, now);
+  if (reqCount > rateLimit) {
+    blockedIPs[ip] = now + BLOCK_DURATION;
+    addLiveLog('blocked', `🚫 Blocked [Rate Limit]: ${ip} — ${reqCount} req/menit`);
+    addAttackLog(ip, 'Rate-Limit', `${reqCount} req/mnt`);
     sendTelegram(
-      `🚫 *Rate Limit — IP Diblokir*\n\`${ip}\`\n${reqCount}/${rateLimit2} req/mnt`,
-      `rl-${ip}`, 300000
+      `🚫 *IP Diblokir — Rate Limit*\n\`IP: ${ip}\`\nRequest: \`${reqCount} per menit\`\nLimit: \`${rateLimit}/menit\`\nDurasi: *1 jam*\nWaktu: ${new Date().toLocaleString('id-ID')}`,
+      `blocked-${ip}`, 300000
     );
     return res.status(429).json({
       status: false, code: 429,
@@ -612,7 +402,7 @@ app.use((req, res, next) => {
     });
   }
 
-  // Request log
+  // Log request normal
   global.totalreq += 1;
   const logData = { ip, method: req.method, path: req.path, time: new Date().toLocaleString('id-ID') };
   requestLogs.unshift(logData);
@@ -625,10 +415,11 @@ app.use((req, res, next) => {
 
   console.log(
     chalk.hex('#00cec9')(`[ ${logData.time} ]`),
-    chalk.green(req.method), chalk.yellow(req.path), chalk.white(ip)
+    chalk.green(req.method),
+    chalk.yellow(req.path),
+    chalk.white(ip)
   );
 
-  // Inject creator + broadcast
   const originalJson = res.json;
   res.json = function (data) {
     if (data && typeof data === 'object' && !Array.isArray(data) &&
@@ -645,26 +436,6 @@ app.use((req, res, next) => {
 
   next();
 });
-
-function autoBlock(ip, reason, detail, now) {
-  blockedIPs[ip] = now + BLOCK_DURATION;
-  blockCount[ip] = (blockCount[ip] || 0) + 1;
-  addLiveLog('blocked', `🚫 Blocked [${reason}]: ${ip}`);
-  addAttackLog(ip, reason, detail);
-  console.log(chalk.bgRed.white(` ${reason} `), chalk.red(ip));
-
-  if (blockCount[ip] >= PERM_BAN_THRESHOLD) {
-    ipBlacklistPermanent.add(ip);
-    delete blockedIPs[ip];
-    addLiveLog('blocked', `☠️ AUTO PERM-BAN: ${ip} (${blockCount[ip]}x block)`);
-    logger.error(`AUTO PERM-BAN: ${ip} — ${blockCount[ip]}x blocked, last: ${reason}`);
-    sendTelegram(
-      `☠️ *AUTO PERMANENT BAN*\n\`IP: ${ip}\`\nSudah *${blockCount[ip]}x* kena block\nTerakhir: ${reason}\nWaktu: ${new Date().toLocaleString('id-ID')}`,
-      null, 0
-    );
-  }
-}
-
 /* ===============================
    TELEGRAM BOT HANDLER
 ================================= */
@@ -725,22 +496,8 @@ async function handleUpdate(update) {
         addLiveLog('blocked', `🔒 Manual block: ${ip}`);
         return sendTo(chatId, `🚫 IP \`${ip}\` diblokir 1 jam!`, BACK_BTN);
       }
-      case '/permban': {
-        const ip = text.split(' ')[1];
-        if (!ip) return sendTo(chatId, '⚠️ Format: `/permban <ip>`', BACK_BTN);
-        ipBlacklistPermanent.add(ip);
-        delete blockedIPs[ip];
-        addLiveLog('blocked', `☠️ Perm-ban: ${ip}`);
-        return sendTo(chatId, `☠️ IP \`${ip}\` di-*permanent ban*!`, BACK_BTN);
-      }
       case '/clearblocks':
         return handleCb(chatId, null, 'clear_blocks');
-      case '/whitelist': {
-        const ip = text.split(' ')[1];
-        if (!ip) return sendTo(chatId, '⚠️ Format: `/whitelist <ip>`', BACK_BTN);
-        ipWhitelist.add(ip);
-        return sendTo(chatId, `✅ IP \`${ip}\` di-whitelist!`, BACK_BTN);
-      }
       case '/broadcast': {
         const bcast = text.replace('/broadcast', '').trim();
         if (!bcast) {
@@ -757,7 +514,7 @@ async function handleUpdate(update) {
         return sendTo(chatId, '🗑️ *Broadcast dihapus!*', BACK_BTN);
       case '/help':
         return sendTo(chatId,
-          `📖 *Daftar Lengkap Command*\n` +
+          `📖 *Daftar Command*\n` +
           `━━━━━━━━━━━━━━━━━━━━\n\n` +
           `🏠 \`/start\` — Menu utama\n` +
           `📊 \`/stats\` — Statistik server\n` +
@@ -773,8 +530,6 @@ async function handleUpdate(update) {
           `*IP Management:*\n` +
           `🚫 \`/block <ip>\` — Block 1 jam\n` +
           `🔓 \`/unblock <ip>\` — Unblock\n` +
-          `☠️ \`/permban <ip>\` — Permanent ban\n` +
-          `✅ \`/whitelist <ip>\` — Whitelist\n` +
           `🧹 \`/clearblocks\` — Hapus semua blokir\n\n` +
           `*Broadcast:*\n` +
           `📢 \`/broadcast <msg>\` — Set broadcast\n` +
@@ -801,7 +556,7 @@ async function handleState(chatId, text, state) {
   if (state === 'waiting_broadcast') {
     global.broadcastMessage = text;
     global.broadcastTime = new Date().toLocaleString('id-ID');
-    addLiveLog('warn', `📢 Broadcast: ${text.slice(0,40)}`);
+    addLiveLog('warn', `📢 Broadcast: ${text.slice(0, 40)}`);
     return sendTo(chatId, `📢 *Broadcast Aktif!*\n\nPesan: _${text}_`, BACK_BTN);
   }
   if (state === 'waiting_maintenance_msg') {
@@ -822,7 +577,6 @@ async function sendHomeMenu(chatId) {
   const uptimeSec = Math.floor((Date.now() - serverStart) / 1000);
   const status = serverStopped ? '⏹️ STOPPED' : maintenanceMode ? '🔧 MAINTENANCE' : '🟢 ONLINE';
   const blocked = Object.keys(blockedIPs).length;
-  const perm = ipBlacklistPermanent.size;
   await sendTo(chatId,
     `╔══════════════════════╗\n` +
     `      🔥 *PHOENIX VISION*\n` +
@@ -832,7 +586,7 @@ async function sendHomeMenu(chatId) {
     `⏱️ Uptime: \`${formatRuntime(uptimeSec)}\`\n` +
     `📦 Routes: \`${totalRoutes}\`\n` +
     `📡 Total Request: \`${global.totalreq}\`\n` +
-    `🚫 Blocked: \`${blocked}\` | ☠️ Perm: \`${perm}\`\n` +
+    `🚫 Blocked: \`${blocked} IP\`\n` +
     (global.broadcastMessage ? `📢 Broadcast: _aktif_\n` : ``) +
     `\n🕐 _${new Date().toLocaleString('id-ID')}_\n\n` +
     `_Pilih menu di bawah ini:_`,
@@ -878,12 +632,12 @@ async function handleCb(chatId, msgId, data) {
         `📦 Routes : \`${totalRoutes}\`\n\n` +
         `⚙️ *CPU*\n` +
         `${makeBar(cpuPct)} \`${cpuPct}%\`\n` +
-        `Model: \`${(cpus[0]?.model || 'N/A').slice(0,35)}\`\n` +
+        `Model: \`${(cpus[0]?.model || 'N/A').slice(0, 35)}\`\n` +
         `Cores: \`${cpus.length}\` | Load: \`${loadAvg[0].toFixed(2)}\`\n\n` +
         `💾 *Memory*\n` +
         `Heap ${makeBar(heapPct)} \`${heapPct}%\`\n` +
-        `Used: \`${(mem.heapUsed/1024/1024).toFixed(1)}MB\` / \`${(mem.heapTotal/1024/1024).toFixed(1)}MB\`\n` +
-        `RSS: \`${(mem.rss/1024/1024).toFixed(1)}MB\`\n\n` +
+        `Used: \`${(mem.heapUsed / 1024 / 1024).toFixed(1)}MB\` / \`${(mem.heapTotal / 1024 / 1024).toFixed(1)}MB\`\n` +
+        `RSS: \`${(mem.rss / 1024 / 1024).toFixed(1)}MB\`\n\n` +
         `🕐 _${new Date().toLocaleString('id-ID')}_`
       );
     }
@@ -900,52 +654,34 @@ async function handleCb(chatId, msgId, data) {
         `⏱️ Uptime : \`${h.uptime}\`\n` +
         `🚫 Blocked : \`${h.blocked} IP\`\n\n` +
         (h.problems.length > 0
-          ? `*⚠️ Masalah Ditemukan:*\n` + h.problems.map((p,i) => `${i+1}. ${p}`).join('\n') + `\n\n`
+          ? `*⚠️ Masalah Ditemukan:*\n` + h.problems.map((p, i) => `${i + 1}. ${p}`).join('\n') + `\n\n`
           : ``
         ) +
-        `🕐 _${h.time}_`
+        `🕐 _${new Date().toLocaleString('id-ID')}_`
       );
     }
     case 'security': {
       const now = Date.now();
-      const active = Object.entries(blockedIPs).filter(([,e]) => now < e);
+      const active = Object.entries(blockedIPs).filter(([, e]) => now < e);
       const suspicious = Object.keys(suspiciousIPs).filter(ip => !blockedIPs[ip]);
-      const recent = attackLog.slice(0,5);
+      const recent = attackLog.slice(0, 5);
       return reply(
         `🔒 *Security Overview*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n\n` +
         `🚫 Blocked aktif  : \`${active.length}\`\n` +
-        `⚠️ Suspicious     : \`${suspicious.length}\`\n` +
-        `☠️ Perm-ban       : \`${ipBlacklistPermanent.size}\`\n` +
-        `✅ Whitelist      : \`${ipWhitelist.size}\`\n\n` +
+        `⚠️ Suspicious     : \`${suspicious.length}\`\n\n` +
         `📏 Rate Limit API : \`${RATE_LIMIT_API}/mnt\`\n` +
         `📏 Rate Dashboard : \`${RATE_LIMIT_INTERNAL}/mnt\`\n` +
-        `⏳ Durasi Ban     : \`1 jam\`\n` +
-        `🔁 Auto Perm-ban  : setelah \`${PERM_BAN_THRESHOLD}x\` block\n` +
-        `🛡️ Helmet         : \`Aktif\`\n` +
-        `🌐 CORS Strict    : \`Aktif\`\n` +
-        `💉 Body Sanitize  : \`Aktif\`\n` +
-        `🔑 API Key Guard  : \`${global.apikey ? 'Aktif' : 'Nonaktif'}\`\n\n` +
+        `⏳ Durasi Ban     : \`1 jam\`\n\n` +
         (recent.length > 0
           ? `*🔴 Attack Log Terbaru:*\n` +
-            recent.map(a => `• \`${a.ip}\` — ${a.type} (${a.time.split(',')[1]?.trim() || ''})`).join('\n')
+          recent.map(a => `• \`${a.ip}\` — ${a.type}`).join('\n')
           : `✅ Tidak ada serangan terbaru.`
         ),
         [
-          [
-            { text: '🚫 Blocked IPs', callback_data: 'blocked_list' },
-            { text: '☠️ Perm-ban List', callback_data: 'permban_list' }
-          ],
+          [{ text: '🚫 Blocked IPs', callback_data: 'blocked_list' }],
           BACK_BTN[0]
         ]
-      );
-    }
-    case 'permban_list': {
-      const perm = [...ipBlacklistPermanent];
-      return reply(
-        `☠️ *Permanent Ban List (${perm.length} IP)*\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n\n` +
-        (perm.length > 0 ? perm.map((ip,i) => `${i+1}. \`${ip}\``).join('\n') : '✅ Tidak ada perm-ban.')
       );
     }
     case 'toggle_maintenance': {
@@ -991,18 +727,14 @@ async function handleCb(chatId, msgId, data) {
       } else {
         serverStopped = false;
         addLiveLog('success', '▶️ Server aktif kembali via bot');
-        return reply(`▶️ *Server Aktif Kembali!*\nRequest diterima normal.`, MAIN_MENU());
+        return reply(`▶️ *Server Aktif Kembali!*`, MAIN_MENU());
       }
     }
     case 'stop_default': {
       stopMessage = "Server sedang dihentikan sementara oleh admin.";
       serverStopped = true;
       addLiveLog('warn', '⏹️ Server dihentikan via bot');
-      sendTelegram(`⏹️ *Server Dihentikan oleh Admin*\nWaktu: ${new Date().toLocaleString('id-ID')}`);
-      return reply(
-        `⏹️ *Server Dihentikan!*\n\nSemua request mendapat response 503.\nTekan *Start Server* untuk mengaktifkan kembali.`,
-        MAIN_MENU()
-      );
+      return reply(`⏹️ *Server Dihentikan!*\nTekan *Start Server* untuk mengaktifkan kembali.`, MAIN_MENU());
     }
     case 'stop_custom': {
       userState[chatId] = 'waiting_stop_msg';
@@ -1010,7 +742,7 @@ async function handleCb(chatId, msgId, data) {
     }
     case 'restart_server': {
       return reply(
-        `🔄 *Restart Server*\n\nServer akan offline beberapa detik.\nYakin ingin restart?`,
+        `🔄 *Restart Server*\n\nYakin ingin restart?`,
         [
           [
             { text: '✅ Ya, Restart!', callback_data: 'confirm_restart' },
@@ -1024,10 +756,10 @@ async function handleCb(chatId, msgId, data) {
       addLiveLog('warn', '🔄 Restart via Telegram bot');
       exec('pm2 restart all', async (err, stdout) => {
         if (err) {
-          await sendTelegram(`🔄 *PM2 tidak tersedia, process restart...*\nWaktu: ${new Date().toLocaleString('id-ID')}`);
+          await sendTelegram(`⚠️ *PM2 tidak tersedia, melakukan process.exit...*`);
           setTimeout(() => process.exit(0), 1000);
         } else {
-          await sendTelegram(`✅ *Restart PM2 Berhasil!*\n\`\`\`${stdout.slice(0,200)}\`\`\`\nWaktu: ${new Date().toLocaleString('id-ID')}`);
+          await sendTelegram(`✅ *Restart PM2 Berhasil!*\n\`\`\`${stdout.slice(0, 200)}\`\`\``);
         }
       });
       break;
@@ -1045,8 +777,8 @@ async function handleCb(chatId, msgId, data) {
     case 'blocked_list': {
       const now = Date.now();
       const blocked = Object.entries(blockedIPs)
-        .filter(([,e]) => now < e)
-        .map(([ip, e]) => `• \`${ip}\` — sisa ${Math.ceil((e-now)/60000)}m`);
+        .filter(([, e]) => now < e)
+        .map(([ip, e]) => `• \`${ip}\` — sisa ${Math.ceil((e - now) / 60000)}m`);
       return reply(
         `🚫 *IP Blocked (${blocked.length} aktif)*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -1056,13 +788,16 @@ async function handleCb(chatId, msgId, data) {
     case 'unblock_prompt': {
       userState[chatId] = 'waiting_unblock_ip';
       return reply(
-        `🔓 *Unblock IP*\n\nKirim IP yang ingin di-unblock:\n_(contoh: 123.45.67.89)_`,
+        `🔓 *Unblock IP*\n\nKirim IP yang ingin di-unblock:`,
         [[{ text: '❌ Batal', callback_data: 'main_menu' }]]
       );
     }
     case 'clear_blocks': {
       const count = Object.keys(blockedIPs).length;
-      for (const ip of Object.keys(blockedIPs)) { delete blockedIPs[ip]; delete suspiciousIPs[ip]; }
+      for (const ip of Object.keys(blockedIPs)) {
+        delete blockedIPs[ip];
+        delete suspiciousIPs[ip];
+      }
       addLiveLog('success', `🧹 ${count} IP di-unblock via bot`);
       return reply(`🧹 *Clear All Blocks*\n\nBerhasil hapus *${count}* IP dari daftar blokir!`);
     }
@@ -1106,12 +841,12 @@ async function handleCb(chatId, msgId, data) {
     case 'req_stats': {
       const topIPs = {};
       requestLogs.forEach(r => { topIPs[r.ip] = (topIPs[r.ip] || 0) + 1; });
-      const topIPList = Object.entries(topIPs).sort((a,b) => b[1]-a[1]).slice(0,5)
-        .map(([ip,c], i) => `${i+1}. \`${ip}\` — ${c}x`);
+      const topIPList = Object.entries(topIPs).sort((a, b) => b[1] - a[1]).slice(0, 5)
+        .map(([ip, c], i) => `${i + 1}. \`${ip}\` — ${c}x`);
       const topPaths = {};
       requestLogs.forEach(r => { topPaths[r.path] = (topPaths[r.path] || 0) + 1; });
-      const topPathList = Object.entries(topPaths).sort((a,b) => b[1]-a[1]).slice(0,5)
-        .map(([p,c], i) => `${i+1}. \`${p}\` — ${c}x`);
+      const topPathList = Object.entries(topPaths).sort((a, b) => b[1] - a[1]).slice(0, 5)
+        .map(([p, c], i) => `${i + 1}. \`${p}\` — ${c}x`);
       return reply(
         `📈 *Request Statistics*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -1127,57 +862,12 @@ async function handleCb(chatId, msgId, data) {
       return reply(
         `🧠 *Memory Detail*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `💾 Heap Used   : \`${(mem.heapUsed/1024/1024).toFixed(2)} MB\`\n` +
-        `📦 Heap Total  : \`${(mem.heapTotal/1024/1024).toFixed(2)} MB\`\n` +
+        `💾 Heap Used   : \`${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB\`\n` +
+        `📦 Heap Total  : \`${(mem.heapTotal / 1024 / 1024).toFixed(2)} MB\`\n` +
         `📊 Heap Usage  : ${makeBar(heapPct)} \`${heapPct}%\`\n\n` +
-        `🧩 RSS         : \`${(mem.rss/1024/1024).toFixed(2)} MB\`\n` +
-        `🔗 External    : \`${(mem.external/1024/1024).toFixed(2)} MB\`\n` +
-        `🗃️ ArrayBuffers : \`${((mem.arrayBuffers||0)/1024/1024).toFixed(2)} MB\`\n\n` +
+        `🧩 RSS         : \`${(mem.rss / 1024 / 1024).toFixed(2)} MB\`\n` +
+        `🔗 External    : \`${(mem.external / 1024 / 1024).toFixed(2)} MB\`\n\n` +
         `_Node.js ${process.version} on ${process.platform}_`
-      );
-    }
-    case 'firewall_rules': {
-      return reply(
-        `🛡️ *Firewall Rules Aktif*\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `*Helmet Headers:*\n` +
-        `• CSP, HSTS, X-Frame-Deny\n` +
-        `• XSS Filter, No-Sniff, Hide X-Powered-By\n\n` +
-        `*Auto Block:*\n` +
-        `• No User-Agent\n` +
-        `• Bad UA (${BAD_AGENTS.length} pattern)\n` +
-        `• Path Scan (${SUSPICIOUS_PATHS.length} path)\n` +
-        `• XSS/SQLi URL & BODY Detection\n` +
-        `• Rate Limit (${RATE_LIMIT_API} req/mnt)\n` +
-        `• Slow-down setelah 150 req/mnt\n` +
-        `• Body size limit (100kb)\n` +
-        `• HPP (HTTP Param Pollution)\n` +
-        `• NoSQL Injection sanitize\n\n` +
-        `*Auto Perm-Ban:*\n` +
-        `• IP ${PERM_BAN_THRESHOLD}x block → perm-ban otomatis\n\n` +
-        `*CORS:*\n` +
-        `• Origin whitelist aktif\n\n` +
-        `*Monitor:*\n` +
-        `• Health check tiap 1 menit\n` +
-        `• Auto cleanup stale block tiap 5 menit\n` +
-        `• Log persistent (Winston)`
-      );
-    }
-    case 'update_config': {
-      return reply(
-        `⚙️ *Konfigurasi Server*\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `📌 API Title    : \`${settings.apiTitle}\`\n` +
-        `👤 Creator      : \`${settings.creatorName}\`\n` +
-        `🔧 Maintenance  : \`${maintenanceMode ? 'ON' : 'OFF'}\`\n` +
-        `⏹️ Server Stop  : \`${serverStopped ? 'ON' : 'OFF'}\`\n` +
-        `📢 Broadcast    : \`${global.broadcastMessage ? 'Aktif' : 'Tidak ada'}\`\n` +
-        `🚫 Rate Limit   : \`${RATE_LIMIT_API}/mnt\`\n` +
-        `☠️ Perm-ban at  : \`${PERM_BAN_THRESHOLD}x\` block\n` +
-        `🛡️ Helmet       : \`Aktif\`\n` +
-        `💾 Winston Log  : \`Aktif\`\n` +
-        `🔑 API Key      : \`${global.apikey ? 'Terkonfigurasi' : 'Tidak diset'}\`\n\n` +
-        `_Edit \`.env\` untuk ubah config tanpa restart._`
       );
     }
   }
@@ -1189,10 +879,6 @@ async function unblockIP(chatId, ip) {
     delete suspiciousIPs[ip];
     addLiveLog('success', `✅ Unblocked: ${ip} via bot`);
     return sendTo(chatId, `✅ IP \`${ip}\` berhasil di-unblock!`, BACK_BTN);
-  } else if (ipBlacklistPermanent.has(ip)) {
-    ipBlacklistPermanent.delete(ip);
-    addLiveLog('success', `✅ Perm-ban dicabut: ${ip} via bot`);
-    return sendTo(chatId, `✅ Permanent ban \`${ip}\` dicabut!`, BACK_BTN);
   } else {
     return sendTo(chatId, `⚠️ IP \`${ip}\` tidak ada di daftar blokir.`, BACK_BTN);
   }
@@ -1243,8 +929,10 @@ app.get('/runtime', (req, res) => {
     stopped: serverStopped,
     broadcast: global.broadcastMessage || null,
     memory: { rss: mem.rss, heapUsed: mem.heapUsed, heapTotal: mem.heapTotal, external: mem.external },
-    cpu: cpuPct, cpu_cores: cpus.length,
-    cpu_model: cpus[0]?.model || 'Unknown CPU', loadAvg
+    cpu: cpuPct,
+    cpu_cores: cpus.length,
+    cpu_model: cpus[0]?.model || 'Unknown CPU',
+    loadAvg
   });
 });
 
@@ -1261,7 +949,6 @@ app.get('/security-stats', (req, res) => {
     status: true,
     totalBlockedNow: blocked.length,
     totalSuspicious: Object.keys(suspiciousIPs).filter(ip => !blockedIPs[ip]).length,
-    totalPermBan: ipBlacklistPermanent.size,
     blockedIPs: blocked,
     rateLimit: RATE_LIMIT_API,
     blockDuration: '1 jam',
@@ -1297,14 +984,13 @@ fs.readdirSync(apiFolder).forEach(file => {
         const { name, desc, category, path: routePath, run } = route;
         if (name && desc && category && routePath && typeof run === 'function') {
           const cleanPath = routePath.split('?')[0];
-          // Apply per-endpoint rate limiter on API routes
-          app.get(cleanPath, apiLimiter, run);
+          app.get(cleanPath, run);
           if (!rawEndpoints[category]) rawEndpoints[category] = [];
           rawEndpoints[category].push({ name, desc, path: routePath });
           totalRoutes++;
           console.log(chalk.hex('#55efc4')(`✔ Loaded: `) + chalk.hex('#ffeaa7')(`${cleanPath} (${file})`));
         } else {
-          console.warn(chalk.bgRed.white(` ⚠ Skipped: ${file}`));
+          console.warn(chalk.bgRed.white(` ⚠ Skipped invalid route in ${file}`));
         }
       });
     } catch (err) {
@@ -1314,15 +1000,18 @@ fs.readdirSync(apiFolder).forEach(file => {
 });
 
 const endpoints = Object.keys(rawEndpoints).sort().reduce((sorted, cat) => {
-  sorted[cat] = rawEndpoints[cat].sort((a,b) => a.name.localeCompare(b.name));
+  sorted[cat] = rawEndpoints[cat].sort((a, b) => a.name.localeCompare(b.name));
   return sorted;
 }, {});
 
 app.get('/endpoints', (req, res) => res.json(endpoints));
 
 app.get('/', (req, res) => {
-  try { res.sendFile(path.join(__dirname, 'index.html')); }
-  catch (err) { console.log(err); }
+  try {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 /* ===============================
@@ -1335,48 +1024,30 @@ app.use((req, res) => {
 });
 
 /* ===============================
-   GLOBAL ERROR HANDLER
-================================= */
-
-app.use((err, req, res, next) => {
-  if (err.message?.includes('CORS')) {
-    return res.status(403).json({ status: false, code: 403, message: 'CORS: Origin tidak diizinkan.' });
-  }
-  logger.error(`Unhandled error: ${err.message}`);
-  res.status(500).json({ status: false, code: 500, message: 'Internal server error.' });
-});
-
-/* ===============================
    START SERVER
 ================================= */
 
 app.listen(PORT, () => {
   console.log(chalk.bgGreen.black(` 🚀 Server running on port ${PORT} `));
   console.log(chalk.bgCyan.black(` 📦 Total Routes: ${totalRoutes} `));
-  console.log(chalk.bgYellow.black(` 🛡️ Helmet + Anti-DDoS + XSS/SQLi Guard Active `));
+  console.log(chalk.bgYellow.black(` 🛡️ Anti-DDoS: API ${RATE_LIMIT_API}/mnt | Internal ${RATE_LIMIT_INTERNAL}/mnt `));
   console.log(chalk.bgMagenta.black(` 🤖 Telegram Bot: Polling Active `));
-  console.log(chalk.bgBlue.black(` 📝 Winston Logger: Active → ./logs/ `));
 
-  addLiveLog('success', `🚀 Server started port ${PORT}`);
+  addLiveLog('success', `🚀 Server started on port ${PORT}`);
   addLiveLog('success', `📦 ${totalRoutes} routes loaded`);
-  addLiveLog('success', `🛡️ Helmet + Anti-DDoS + XSS/SQLi + HPP + Body-Check aktif`);
+  addLiveLog('success', `🛡️ Anti-DDoS aktif — API: ${RATE_LIMIT_API}/mnt | Dashboard: ${RATE_LIMIT_INTERNAL}/mnt`);
   addLiveLog('success', `🤖 Telegram Bot polling aktif`);
-  addLiveLog('success', `📝 Winston log aktif → ./logs/`);
 
   startPolling().catch(err => console.error(chalk.red('[POLLING ERROR]'), err.message));
 
   sendTelegram(
     `🚀 *${settings.apiTitle} — Server Online!*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n\n` +
-    `🟢 Status    : *ONLINE*\n` +
-    `🔌 Port      : \`${PORT}\`\n` +
-    `📦 Routes    : \`${totalRoutes}\`\n` +
-    `🛡️ Helmet    : \`Aktif\`\n` +
-    `🛡️ Anti-DDoS  : \`Aktif\`\n` +
-    `💉 XSS/SQLi  : \`Aktif (URL+Body)\`\n` +
-    `☠️ Auto Perm  : \`Aktif\`\n` +
-    `📝 Logger    : \`Winston Persistent\`\n` +
-    `🤖 Bot       : \`Polling\`\n\n` +
+    `🟢 Status  : *ONLINE*\n` +
+    `🔌 Port    : \`${PORT}\`\n` +
+    `📦 Routes  : \`${totalRoutes}\`\n` +
+    `🛡️ Anti-DDoS: \`Aktif\`\n` +
+    `🤖 Bot     : \`Polling\`\n\n` +
     `🕐 ${new Date().toLocaleString('id-ID')}\n\n` +
     `_Ketik /menu untuk panel kontrol._`
   );
