@@ -6,7 +6,6 @@ const cors = require('cors');
 const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
-const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
 const hpp = require('hpp');
@@ -35,39 +34,6 @@ const logger = winston.createLogger({
 });
 
 if (!fs.existsSync('logs')) fs.mkdirSync('logs');
-
-/* ===============================
-   HELMET — SECURITY HEADERS
-================================= */
-
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false,
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  permittedCrossDomainPolicies: false,
-  xssFilter: true,
-  noSniff: true,
-  hidePoweredBy: true,
-  frameguard: { action: 'deny' }
-}));
-
 /* ===============================
    CORS — STRICT ORIGIN
 ================================= */
