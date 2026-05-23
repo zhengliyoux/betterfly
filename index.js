@@ -251,7 +251,7 @@ async function runHealthCheck() {
   if (parseFloat(rssMb) > 512) problems.push(`🧠 RSS Memory besar: *${rssMb} MB*`);
   if (Object.keys(blockedIPs).length > 20) problems.push(`🚫 IP Blocked banyak: *${Object.keys(blockedIPs).length} IP*`);
 
-  if (problems.length > 0) {
+if (problems.length > 0) {
     if (!healthAlertActive) {
       healthAlertActive = true;
       await sendTelegram(
@@ -1062,4 +1062,4 @@ app.listen(PORT, () => {
   );
 });
 
-module.exports = app; 
+module.exports = app;
