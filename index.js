@@ -22,6 +22,18 @@ app.use('/', express.static(path.join(__dirname, 'ui')));
 app.use('/api', express.static(path.join(__dirname, 'api')));
 
 /* ===============================
+   GLOBAL CRASH HANDLER
+================================= */
+
+process.on('uncaughtException', (err) => {
+  console.error(chalk.bgRed.white('💥 uncaughtException:'), err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(chalk.bgRed.white('💥 unhandledRejection:'), reason);
+});
+
+/* ===============================
    GLOBAL FUNCTION
 ================================= */
 
@@ -183,7 +195,7 @@ const suspiciousIPs = {};
 
 const RATE_LIMIT_API = 300;
 const RATE_LIMIT_INTERNAL = 1200;
-const BLOCK_DURATION = 60 * 60 * 1000; // 1 jam
+const BLOCK_DURATION = 60 * 60 * 1000;
 
 const INTERNAL_PATHS = [
   '/runtime', '/security-stats', '/live-logs',
@@ -236,6 +248,8 @@ function makeBar(pct) {
    AUTO HEALTH MONITOR
 ================================= */
 
+let healthAlertActive = false; // FIX: variable yang hilang sebelumnya
+
 async function runHealthCheck() {
   const mem = process.memoryUsage();
   const cpus = os.cpus();
@@ -251,7 +265,7 @@ async function runHealthCheck() {
   if (parseFloat(rssMb) > 512) problems.push(`🧠 RSS Memory besar: *${rssMb} MB*`);
   if (Object.keys(blockedIPs).length > 20) problems.push(`🚫 IP Blocked banyak: *${Object.keys(blockedIPs).length} IP*`);
 
-if (problems.length > 0) {
+  if (problems.length > 0) {
     if (!healthAlertActive) {
       healthAlertActive = true;
       await sendTelegram(
@@ -445,6 +459,7 @@ app.use((req, res, next) => {
 
   next();
 });
+
 /* ===============================
    TELEGRAM BOT HANDLER
 ================================= */
@@ -532,7 +547,7 @@ async function handleUpdate(update) {
           `*Server Control:*\n` +
           `⏹️ \`/stop\` — Hentikan server\n` +
           `▶️ \`/start_server\` — Hidupkan kembali\n` +
-          `🔄 \`/restart\` — Restart via PM2\n\n` +
+          `🔄 \`/restart\` — Restart\n\n` +
           `*Maintenance:*\n` +
           `🔧 \`/maintenance_on\` — Aktifkan\n` +
           `🔧 \`/maintenance_off\` — Nonaktifkan\n\n` +
@@ -761,16 +776,11 @@ async function handleCb(chatId, msgId, data) {
       );
     }
     case 'confirm_restart': {
-      await reply(`🔄 *Mengirim perintah restart...*`);
+      // FIX: Hapus pm2, langsung process.exit karena Railway auto restart container
+      await reply(`🔄 *Server akan restart dalam 1 detik...*`);
       addLiveLog('warn', '🔄 Restart via Telegram bot');
-      exec('pm2 restart all', async (err, stdout) => {
-        if (err) {
-          await sendTelegram(`⚠️ *PM2 tidak tersedia, melakukan process.exit...*`);
-          setTimeout(() => process.exit(0), 1000);
-        } else {
-          await sendTelegram(`✅ *Restart PM2 Berhasil!*\n\`\`\`${stdout.slice(0, 200)}\`\`\``);
-        }
-      });
+      await sendTelegram(`🔄 *Server sedang restart...*`);
+      setTimeout(() => process.exit(0), 1000);
       break;
     }
     case 'live_logs': {
