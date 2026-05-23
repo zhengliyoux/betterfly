@@ -252,13 +252,22 @@ async function runHealthCheck() {
   if (Object.keys(blockedIPs).length > 20) problems.push(`🚫 IP Blocked banyak: *${Object.keys(blockedIPs).length} IP*`);
 
   if (problems.length > 0) {
-    await sendTelegram(
-      `🚨 *HEALTH ALERT — ${settings.apiTitle}*\n\n` +
-      `Ada *${problems.length} masalah* terdeteksi:\n\n` +
-      problems.map((p, i) => `${i + 1}. ${p}`).join('\n') +
-      `\n\n🕐 ${new Date().toLocaleString('id-ID')}`,
-      'health-alert', 300000
-    );
+    if (!healthAlertActive) {
+      healthAlertActive = true;
+      await sendTelegram(
+        `🚨 *HEALTH ALERT — ${settings.apiTitle}*\n\n` +
+        `Ada *${problems.length} masalah* terdeteksi:\n\n` +
+        problems.map((p, i) => `${i + 1}. ${p}`).join('\n') +
+        `\n\n🕐 ${new Date().toLocaleString('id-ID')}`
+      );
+    }
+  } else {
+    if (healthAlertActive) {
+      healthAlertActive = false;
+      await sendTelegram(
+        `✅ *HEALTH RESOLVED — ${settings.apiTitle}*\n\nSemua sistem normal.\n🕐 ${new Date().toLocaleString('id-ID')}`
+      );
+    }
   }
 
   return { cpu: cpuPct, heap: heapPct, rss: rssMb, uptime: formatRuntime(uptimeSec), blocked: Object.keys(blockedIPs).length, problems };
