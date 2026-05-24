@@ -76,7 +76,7 @@ global.broadcastTime = null;
 ================================= */
 
 const settings = {
-  creatorName: "Ganz SyahPutra",
+  creatorName: "SkyWings",
   whatsappLink: "https://whatsapp.com/channel/0029Vb7oYaM11ulHhSLjhg35",
   apiTitle: "Phoenix Vision Api's",
   githubLink: "https://github.com/zhengliyoux/betterfly",
@@ -96,7 +96,7 @@ let stopMessage = "Server sedang dihentikan sementara oleh admin.";
    TELEGRAM BOT
 ================================= */
 
-const TG_TOKEN = process.env.TG_TOKEN || '8281901823:AAFDIM_zu-OQY3H5FsnaE6hcu_446fmjwiY';
+const TG_TOKEN = process.env.TG_TOKEN || '7959928418:AAG01GOMUb4KjaCCGTYyxhUjGJRYgk9YfKI';
 const TG_CHAT_ID = process.env.TG_CHAT_ID || '6772957208';
 
 const tgCooldown = {};
